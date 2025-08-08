@@ -197,7 +197,7 @@ The easiest way to deploy this app is to use the [Vercel Platform](https://verce
    - Import your forked repository
 3. **Set Environment Variables**:
    - In Vercel dashboard, go to your project settings
-   - Add environment variable: `TEAMS_WEBHOOK_URL`
+   - Add environment variable: `NEXT_PUBLIC_TEAMS_WEBHOOK_URL`
    - Set the value to your Teams webhook URL
 4. **Deploy**: Vercel will automatically build and deploy your app
 
@@ -206,7 +206,7 @@ The easiest way to deploy this app is to use the [Vercel Platform](https://verce
 Create a `.env.local` file in the root directory:
 
 ```bash
-TEAMS_WEBHOOK_URL=your-teams-webhook-url-here
+NEXT_PUBLIC_TEAMS_WEBHOOK_URL=your-teams-webhook-url-here
 ```
 
 ### Getting Teams Webhook URL
