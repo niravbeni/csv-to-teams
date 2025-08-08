@@ -11,7 +11,6 @@ import CsvUpload from '@/components/CsvUpload';
 import MessagePreview from '@/components/MessagePreview';
 import { MeetingData, ProcessedMeeting } from '@/types/meeting';
 import { processMeetingData } from '@/utils/csvParser';
-import { formatMultipleMeetingsForTeams } from '@/utils/teamsFormatter';
 
 export default function Home() {
   const [processedMeetings, setProcessedMeetings] = useState<ProcessedMeeting[]>([]);

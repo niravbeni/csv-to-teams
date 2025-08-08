@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Send, MessageCircle, Calendar, Users, MapPin } from 'lucide-react';
+import { Copy, Check, Send, MessageCircle, Users, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Textarea } from '@/components/ui/textarea';
 import { ProcessedMeeting } from '@/types/meeting';
 import { formatMultipleMeetingsForTeams, formatMeetingsForCopy } from '@/utils/teamsFormatter';
 
