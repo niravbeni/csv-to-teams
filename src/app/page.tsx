@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { FileSpreadsheet, Settings } from 'lucide-react';
+import { FileSpreadsheet, Settings, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import CsvUpload from '@/components/CsvUpload';
 import MessagePreview from '@/components/MessagePreview';
@@ -74,7 +75,7 @@ export default function Home() {
 
   const handleSendMessage = async (messages: string[]) => {
     if (!webhookUrl.trim()) {
-      toast.error('No webhook URL configured');
+      toast.error('No webhook URL configured. Please go to Settings to add your Teams webhook URL.');
       return;
     }
 
@@ -155,6 +156,20 @@ export default function Home() {
               </Button>
             </Link>
           </div>
+
+          {/* Webhook URL Warning */}
+          {!webhookUrl.trim() && (
+            <Alert className="border-orange-200 bg-orange-50 dark:border-orange-800 dark:bg-orange-950">
+              <AlertCircle className="h-4 w-4 text-orange-600" />
+              <AlertDescription className="text-orange-800 dark:text-orange-200">
+                <strong>Teams webhook URL not configured.</strong> Go to{' '}
+                <Link href="/settings" className="underline font-medium">
+                  Settings
+                </Link>{' '}
+                to add your Teams webhook URL before sending messages.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Instructions */}
           <Card>
