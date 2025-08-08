@@ -184,6 +184,40 @@ Sends a message to Teams webhook.
 - **Icons**: Lucide React
 - **Notifications**: Sonner
 
+## Deployment
+
+### Deploy on Vercel
+
+The easiest way to deploy this app is to use the [Vercel Platform](https://vercel.com/new):
+
+1. **Fork this repository** to your GitHub account
+2. **Connect to Vercel**:
+   - Go to [vercel.com](https://vercel.com)
+   - Click "New Project"
+   - Import your forked repository
+3. **Set Environment Variables**:
+   - In Vercel dashboard, go to your project settings
+   - Add environment variable: `TEAMS_WEBHOOK_URL`
+   - Set the value to your Teams webhook URL
+4. **Deploy**: Vercel will automatically build and deploy your app
+
+### Environment Variables
+
+Create a `.env.local` file in the root directory:
+
+```bash
+TEAMS_WEBHOOK_URL=your-teams-webhook-url-here
+```
+
+### Getting Teams Webhook URL
+
+1. Go to your Teams channel
+2. Click the **⋯** (More options) next to the channel name
+3. Select **Connectors**
+4. Find **Incoming Webhook** and click **Configure**
+5. Provide a name and optional image
+6. Copy the webhook URL provided
+
 ## Contributing
 
 1. Fork the repository

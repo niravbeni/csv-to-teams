@@ -14,10 +14,10 @@ export default function SettingsPage() {
   const [messageMode, setMessageMode] = useState<'individual' | 'combined'>('individual');
 
   useEffect(() => {
-    // Load webhook URL from environment variable as default
-    const defaultWebhook = process.env.NEXT_PUBLIC_TEAMS_WEBHOOK_URL;
-    if (defaultWebhook) {
-      setWebhookUrl(defaultWebhook);
+    // Load webhook URL from localStorage if available
+    const savedWebhook = localStorage.getItem('teamsWebhookUrl');
+    if (savedWebhook) {
+      setWebhookUrl(savedWebhook);
     }
     
     // Load message mode from localStorage

@@ -15,6 +15,12 @@ export default function WebhookConfig({ value, onChange }: WebhookConfigProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  const handleChange = (newValue: string) => {
+    onChange(newValue);
+    // Save to localStorage for persistence
+    localStorage.setItem('teamsWebhookUrl', newValue);
+  };
+
   useEffect(() => {
     if (copied) {
       const timer = setTimeout(() => setCopied(false), 2000);
@@ -53,12 +59,12 @@ export default function WebhookConfig({ value, onChange }: WebhookConfigProps) {
         </Label>
         
         <div className="relative">
-          <Input
-            id="webhook-url"
-            type={isVisible ? 'text' : 'password'}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="https://ideo0.webhook.office.com/webhookb2/..."
+                        <Input
+                id="webhook-url"
+                type={isVisible ? 'text' : 'password'}
+                value={value}
+                onChange={(e) => handleChange(e.target.value)}
+                placeholder="https://ideo0.webhook.office.com/webhookb2/..."
             className={`pr-20 ${
               value && !isValidUrl(value) 
                 ? 'border-destructive focus-visible:ring-destructive' 
