@@ -1,13 +1,4 @@
 {
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
-  "env": {
-    "TEAMS_WEBHOOK_URL": "@teams_webhook_url"
-  },
   "headers": [
     {
       "source": "/(.*)",
