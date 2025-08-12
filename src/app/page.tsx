@@ -8,17 +8,16 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import CsvUpload from '@/components/CsvUpload';
-import MessagePreview from '@/components/MessagePreview';
-import { MeetingData, ProcessedMeeting } from '@/types/meeting';
-import { processMeetingData } from '@/utils/csvParser';
+import MultiCsvUpload from '@/components/MultiCsvUpload';
+import MasterPreview from '@/components/MasterPreview';
+import { MasterMeetingRecord } from '@/types/masterMeeting';
 
 export default function Home() {
-  const [processedMeetings, setProcessedMeetings] = useState<ProcessedMeeting[]>([]);
+  const [masterMeetings, setMasterMeetings] = useState<MasterMeetingRecord[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [messageMode, setMessageMode] = useState<'individual' | 'combined'>('individual');
+  const messageMode = 'individual'; // Always individual mode
 
   // Load default webhook URL and message mode from localStorage
   useEffect(() => {
@@ -36,48 +35,17 @@ export default function Home() {
       }
     }
     
-    // Load message mode from localStorage (default to 'individual')
-    const savedMessageMode = localStorage.getItem('messageMode') as 'individual' | 'combined';
-    if (savedMessageMode && (savedMessageMode === 'individual' || savedMessageMode === 'combined')) {
-      setMessageMode(savedMessageMode);
-    }
 
-    // Listen for storage changes (when settings are updated in another tab/page)
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'messageMode' && e.newValue) {
-        const newMode = e.newValue as 'individual' | 'combined';
-        if (newMode === 'individual' || newMode === 'combined') {
-          setMessageMode(newMode);
-        }
-      }
-    };
-
-    // Listen for focus events (when user returns from settings page)
-    const handleFocus = () => {
-      const currentMode = localStorage.getItem('messageMode') as 'individual' | 'combined';
-      if (currentMode && (currentMode === 'individual' || currentMode === 'combined')) {
-        setMessageMode(currentMode);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('focus', handleFocus);
-    };
   }, []);
 
-  const handleDataParsed = (meetings: MeetingData[]) => {
+  const handleDataParsed = (meetings: MasterMeetingRecord[]) => {
     setIsProcessing(true);
     
     setTimeout(() => {
-      const processed = processMeetingData(meetings);
-      setProcessedMeetings(processed);
+      setMasterMeetings(meetings);
       setIsProcessing(false);
       
-      toast.success(`Found ${processed.length} meeting(s) from CSV file`);
+      toast.success(`Consolidated ${meetings.length} meeting(s) from CABS data`);
     }, 500);
   };
 
@@ -146,6 +114,16 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <main className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
+          {/* Settings Button - Top Left */}
+          <div className="flex justify-start mb-4">
+            <Link href="/settings">
+              <Button variant="outline" className="flex items-center gap-2 cursor-pointer">
+                <Settings className="h-4 w-4" />
+                Settings
+              </Button>
+            </Link>
+          </div>
+
           {/* Title & Description */}
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center gap-3">
@@ -155,14 +133,8 @@ export default function Home() {
               <h1 className="text-3xl font-bold text-foreground">CSV to Teams</h1>
             </div>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Upload your meeting CSV file and send beautifully formatted schedules to Microsoft Teams
+              Upload CABS CSV files and send consolidated meeting schedules to Microsoft Teams
             </p>
-            <Link href="/settings">
-              <Button variant="outline" className="flex items-center gap-2 cursor-pointer">
-                <Settings className="h-4 w-4" />
-                Settings & Configuration
-              </Button>
-            </Link>
           </div>
 
           {/* Webhook URL Warning */}
@@ -183,13 +155,12 @@ export default function Home() {
           <Card>
             <CardHeader>
               <CardTitle>How to Use</CardTitle>
-              <CardDescription>Follow these simple steps to send your meeting schedule to Teams</CardDescription>
+              <CardDescription>Follow these simple steps to send your consolidated meeting schedule to Teams</CardDescription>
             </CardHeader>
             <CardContent>
               <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>Upload a CSV file with meeting data</li>
-                <li>Review the generated message preview</li>
-                <li>Send the message directly to your Teams channel</li>
+                <li>Upload 2 CABS CSV files: <strong>Function Room Report</strong> and <strong>Visitor Arrival List</strong></li>
+                <li>Send the formatted messages directly to your Teams channel or copy for manual posting</li>
               </ol>
             </CardContent>
           </Card>
@@ -199,21 +170,21 @@ export default function Home() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
-                <CardTitle>Upload Meeting Data</CardTitle>
+                <CardTitle>Upload CABS CSV Files</CardTitle>
               </div>
-              <CardDescription>Upload your CSV file with meeting information</CardDescription>
+              <CardDescription>Upload Function Room Report + Visitor Arrival List to generate the meeting list</CardDescription>
             </CardHeader>
             <CardContent>
-              <CsvUpload onDataParsed={handleDataParsed} isProcessing={isProcessing} />
+              <MultiCsvUpload onDataParsed={handleDataParsed} isProcessing={isProcessing} />
             </CardContent>
           </Card>
 
-          {/* Message Preview */}
-          {processedMeetings.length > 0 && (
+          {/* Master Preview */}
+          {masterMeetings.length > 0 && (
             <Card>
               <CardContent className="pt-6">
-                <MessagePreview 
-                  meetings={processedMeetings} 
+                <MasterPreview 
+                  meetings={masterMeetings} 
                   onSendMessage={handleSendMessage} 
                   isSending={isSending}
                   messageMode={messageMode}
@@ -222,38 +193,10 @@ export default function Home() {
             </Card>
           )}
 
-          {/* Sample Data */}
-          {processedMeetings.length === 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Expected CSV Format</CardTitle>
-                <CardDescription>Here&apos;s the format your CSV file should follow</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="bg-muted rounded-lg p-4">
-                  <pre className="text-sm text-muted-foreground font-mono overflow-x-auto">
-                    {`2025-08-08,Q3 Strategy Review,Conference Call,Room 201B,Alice Cooper; Robert Martinez; Jennifer Lee
-2025-08-08,Software Developer Interviews,Interviews,Room 305,Tom Anderson; Lisa Park; James Wright
-2025-08-08,Client Onboarding Session,Client Meeting,Executive Suite,Rachel Green; Mark Thompson; Sophie Davis`}
-                  </pre>
-                </div>
-                <p className="text-sm text-muted-foreground mt-3">
-                  Format: Date (YYYY-MM-DD), Meeting Type, Category, Room, Members (semicolon-separated, first member is the host).
-                </p>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       </main>
-      <footer className="border-t bg-muted/50 mt-16">
-        <div className="container max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Separator className="mb-6" />
-          <div className="text-center text-muted-foreground text-sm">
-            <p className="font-medium">CSV to Teams Webhook Integration</p>
-            <p className="mt-1">Built with Next.js, TypeScript & shadcn/ui</p>
-          </div>
-        </div>
-      </footer>
+
     </div>
   );
 }
