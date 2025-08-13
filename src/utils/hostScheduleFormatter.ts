@@ -8,11 +8,11 @@ export const formatHostScheduleForTeams = (hostSchedule: HostSchedule): string =
   
   let message = `👤 **Host Name:**\n${hostSchedule.formattedHostName}\n\n`;
   
-  message += `📅 **Bookings:** (${hostSchedule.totalBookings})\n\n`;
+  message += `📅 **Bookings for today**\n\n`;
   hostSchedule.bookings.forEach((booking, index) => {
-    message += `${index + 1}. **Room:** ${booking.room}\n\n`;
+    message += `${index + 1}. ${booking.purpose}\n\n`;
+    message += `   **Room:** ${booking.room}\n\n`;
     message += `   **Time:** ${booking.startTime} - ${booking.endTime}\n\n`;
-    message += `   **Purpose:** ${booking.purpose}\n\n`;
   });
   
   message += `👥 **Guests:** (${hostSchedule.totalGuests})\n${guestText}\n\n`;
@@ -37,11 +37,11 @@ export const formatHostScheduleForCopy = (hostSchedule: HostSchedule): string =>
   
   let message = `Host Name:\n${hostSchedule.formattedHostName}\n\n`;
   
-  message += `Bookings:\n\n`;
+  message += `Bookings for today\n\n`;
   hostSchedule.bookings.forEach((booking, index) => {
-    message += `${index + 1}. Room: ${booking.room}\n\n`;
+    message += `${index + 1}. ${booking.purpose}\n\n`;
+    message += `   Room: ${booking.room}\n\n`;
     message += `   Time: ${booking.startTime} - ${booking.endTime}\n\n`;
-    message += `   Purpose: ${booking.purpose}\n\n`;
   });
   
   message += `Guests:\n${guestText}\n`;
