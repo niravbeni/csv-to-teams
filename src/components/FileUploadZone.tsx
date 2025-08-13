@@ -36,14 +36,30 @@ export default function FileUploadZone({
   // Force cursor pointer on the dropzone
   useEffect(() => {
     const dropzoneElement = dropzoneRef.current;
-    if (dropzoneElement && !isDisabled) {
-      dropzoneElement.style.cursor = 'pointer';
+    if (dropzoneElement) {
+      // Force cursor pointer aggressively
+      const forceCursor = () => {
+        dropzoneElement.style.setProperty('cursor', 'pointer', 'important');
+        
+        // Force it on all child elements
+        const allElements = dropzoneElement.querySelectorAll('*');
+        allElements.forEach((element: Element) => {
+          (element as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
+        });
+      };
       
-      // Also force it on all child elements
-      const allChildren = dropzoneElement.querySelectorAll('*');
-      allChildren.forEach((child: Element) => {
-        (child as HTMLElement).style.cursor = 'pointer';
-      });
+      // Apply immediately
+      forceCursor();
+      
+      // Apply on mouse events
+      dropzoneElement.addEventListener('mouseenter', forceCursor);
+      dropzoneElement.addEventListener('mouseover', forceCursor);
+      
+      // Cleanup
+      return () => {
+        dropzoneElement.removeEventListener('mouseenter', forceCursor);
+        dropzoneElement.removeEventListener('mouseover', forceCursor);
+      };
     }
   }, [isDisabled, status.status]);
 

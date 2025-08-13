@@ -153,4 +153,25 @@
   div.transition-all {
     cursor: pointer !important;
   }
+  
+  /* Nuclear option - force pointer cursor on common interactive patterns */
+  div[class*="border-dashed"],
+  div[class*="dropzone"],
+  div[class*="upload"],
+  button[class*="inline-flex"],
+  button[class*="items-center"],
+  div[class*="cursor-pointer"],
+  *[class*="cursor-pointer"],
+  div:hover,
+  button:hover {
+    cursor: pointer !important;
+  }
+  
+  /* Force cursor on any element with getRootProps (react-dropzone) */
+  [data-rfd-drag-handle-context-id],
+  [data-rfd-drag-handle-draggable-id],
+  div[style*="cursor"],
+  div[tabindex]:not([tabindex="-1"]) {
+    cursor: pointer !important;
+  }
 }
