@@ -21,10 +21,12 @@ import {
 const normalizeName = (name: string): string => {
   if (!name) return '';
   
-  // Remove titles and normalize
+  // Remove titles, parenthetical suffixes, and normalize special characters
   return name
-    .replace(/\b(Mr|Mrs|Miss|Ms|Dr|Prof)\b\.?\s*/gi, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\b(Mr|Mrs|Miss|Ms|Dr|Prof)\b\.?\s*/gi, '') // Remove titles
+    .replace(/\s*\([^)]*\)\s*/g, '') // Remove anything in parentheses like "(ALS)"
+    .replace(/ë/gi, 'e') // Normalize special characters
+    .replace(/\s+/g, ' ') // Normalize whitespace
     .trim()
     .toLowerCase();
 };
