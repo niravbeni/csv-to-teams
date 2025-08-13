@@ -369,7 +369,18 @@ export const consolidateCABSData = (
   console.log('- Function Rooms:', functionRooms.length);
   console.log('- Visitors:', visitors.length);
   console.log('NEW APPROACH: Starting with ALL hosts from Visitor List (expecting 31 unique hosts)');
+
+  // IMMEDIATE CHECK: Find our missing hosts in raw visitor data
+  const rawVisitorHosts = visitors.map(v => v.hostName?.trim()).filter(name => name);
+  const morrisFound = rawVisitorHosts.find(host => host && host.includes('Morris'));
+  const hughesFound = rawVisitorHosts.find(host => host && (host.includes('Hughes') || host.includes('Zoë')));
   
+  console.log('🚨 IMMEDIATE HOST CHECK:');
+  console.log(`- Morris found in raw data: ${morrisFound ? `"${morrisFound}"` : 'NOT FOUND'}`);
+  console.log(`- Hughes found in raw data: ${hughesFound ? `"${hughesFound}"` : 'NOT FOUND'}`);
+  console.log(`- Total raw visitor host entries: ${rawVisitorHosts.length}`);
+  console.log(`- Unique raw visitor hosts: ${[...new Set(rawVisitorHosts)].length}`);
+
   console.log('Sample Function Room data:', functionRooms.slice(0, 3));
   console.log('Sample Visitor data:', visitors.slice(0, 3));
 
@@ -400,6 +411,19 @@ export const consolidateCABSData = (
     .map(v => v.hostName?.trim())
     .filter(name => name && name.length > 0 && isRealPersonName(name))
   )];
+
+  // IMMEDIATE CHECK: See if our missing hosts passed the filters
+  console.log('🔍 POST-FILTER CHECK:');
+  console.log(`- Morris in filtered visitors: ${hostsFromVisitors.find(h => h.includes('Morris')) || 'NOT FOUND'}`);
+  console.log(`- Hughes in filtered visitors: ${hostsFromVisitors.find(h => h.includes('Hughes') || h.includes('Zoë')) || 'NOT FOUND'}`);
+  console.log(`- Total filtered visitor hosts: ${hostsFromVisitors.length}`);
+
+  // TEST NORMALIZATION DIRECTLY
+  console.log('🧪 NORMALIZATION TEST:');
+  console.log(`- "Mr James Morris (ALS)" -> "${normalizeName('Mr James Morris (ALS)')}"`)
+  console.log(`- "Ms Zoë Hughes" -> "${normalizeName('Ms Zoë Hughes')}"`)
+  if (morrisFound) console.log(`- Raw Morris "${morrisFound}" -> "${normalizeName(morrisFound)}"`)
+  if (hughesFound) console.log(`- Raw Hughes "${hughesFound}" -> "${normalizeName(hughesFound)}"`)
 
   // Log all raw visitor host names for debugging
   console.log('=== ALL RAW VISITOR HOST NAMES ===');
