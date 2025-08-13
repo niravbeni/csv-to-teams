@@ -10,9 +10,9 @@ export const formatHostScheduleForTeams = (hostSchedule: HostSchedule): string =
   
   message += `📅 **Bookings for today**\n\n`;
   hostSchedule.bookings.forEach((booking, index) => {
-    message += `${index + 1}. ${booking.purpose}\n\n`;
-    message += `   **Room:** ${booking.room}\n\n`;
-    message += `   **Time:** ${booking.startTime} - ${booking.endTime}\n\n`;
+    message += `${index + 1}. **${booking.purpose}**\n\n`;
+    message += `   Room: ${booking.room}\n\n`;
+    message += `   Time: ${booking.startTime} - ${booking.endTime}\n\n`;
   });
   
   message += `👥 **Guests:** (${hostSchedule.totalGuests})\n${guestText}\n\n`;
