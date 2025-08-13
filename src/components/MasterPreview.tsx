@@ -35,8 +35,7 @@ const formatHostName = (hostRaw: string): string => {
     title = title.toLowerCase();
     if (title === 'mr') title = 'Mr';
     else if (title === 'mrs') title = 'Mrs';
-    else if (title === 'ms') title = 'Ms';
-    else if (title === 'miss') title = 'Miss';
+    else if (title === 'ms' || title === 'miss') title = 'Ms'; // Standardize Miss to Ms
     else if (title === 'dr') title = 'Dr';
     else if (title === 'prof') title = 'Prof';
     else title = title.charAt(0).toUpperCase() + title.slice(1); // Capitalize first letter
