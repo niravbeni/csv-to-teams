@@ -74,25 +74,22 @@ export default function FileUploadZone({
   const config = getZoneConfig();
 
   const getDropzoneClasses = () => {
-    let classes = "border-2 border-dashed rounded-lg p-6 text-center transition-all min-h-[140px] flex flex-col justify-center ";
+    let classes = "border-2 border-dashed rounded-lg p-6 text-center transition-all min-h-[140px] flex flex-col justify-center cursor-pointer ";
     
     if (isDisabled) {
       classes += "border-muted bg-muted/20 cursor-not-allowed opacity-60 ";
+    } else if (status.status === 'success') {
+      classes += "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950 ";
+    } else if (status.status === 'error') {
+      classes += "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950 ";
+    } else if (status.status === 'uploading') {
+      classes += "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950 ";
+    } else if (isDragReject) {
+      classes += "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950 ";
+    } else if (isDragActive) {
+      classes += "border-primary bg-primary/10 ";
     } else {
-      classes += "cursor-pointer hover:cursor-pointer ";
-      if (status.status === 'success') {
-        classes += "border-green-300 bg-green-50 dark:border-green-700 dark:bg-green-950 ";
-      } else if (status.status === 'error') {
-        classes += "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950 ";
-      } else if (status.status === 'uploading') {
-        classes += "border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-950 ";
-      } else if (isDragReject) {
-        classes += "border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-950 ";
-      } else if (isDragActive) {
-        classes += "border-primary bg-primary/10 ";
-      } else {
-        classes += "border-border hover:border-primary hover:bg-primary/5 ";
-      }
+      classes += "border-border hover:border-primary hover:bg-primary/5 ";
     }
     
     return classes;

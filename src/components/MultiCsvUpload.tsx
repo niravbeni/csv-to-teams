@@ -270,14 +270,12 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
                   variant="outline"
                   onClick={handleReset}
                   disabled={consolidationInProgress}
-                  className="cursor-pointer"
                 >
                   Reset All
                 </Button>
                 <Button
                   onClick={handleConsolidateData}
                   disabled={consolidationInProgress}
-                  className="cursor-pointer"
                 >
                   {consolidationInProgress ? 'Processing...' : 'Generate Meeting List'}
                 </Button>

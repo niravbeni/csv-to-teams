@@ -50,23 +50,20 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
   });
 
   const getDropzoneClasses = () => {
-    let classes = 'border-2 border-dashed rounded-lg p-8 text-center transition-all hover:bg-muted/50 ';
+    let classes = 'border-2 border-dashed rounded-lg p-8 text-center transition-all hover:bg-muted/50 cursor-pointer ';
     
     if (isProcessing) {
       classes += 'border-muted bg-muted/50 cursor-not-allowed ';
+    } else if (isDragReject) {
+      classes += 'border-destructive bg-destructive/10 ';
+    } else if (isDragActive) {
+      classes += 'border-primary bg-primary/10 ';
+    } else if (uploadStatus === 'success') {
+      classes += 'border-green-500 bg-green-50 ';
+    } else if (uploadStatus === 'error') {
+      classes += 'border-destructive bg-destructive/10 ';
     } else {
-      classes += 'cursor-pointer hover:cursor-pointer ';
-      if (isDragReject) {
-        classes += 'border-destructive bg-destructive/10 ';
-      } else if (isDragActive) {
-        classes += 'border-primary bg-primary/10 ';
-      } else if (uploadStatus === 'success') {
-        classes += 'border-green-500 bg-green-50 ';
-      } else if (uploadStatus === 'error') {
-        classes += 'border-destructive bg-destructive/10 ';
-      } else {
-        classes += 'border-border ';
-      }
+      classes += 'border-border ';
     }
     
     return classes;
@@ -88,7 +85,6 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
         <div 
           {...getRootProps()} 
           className={getDropzoneClasses()}
-          style={{ cursor: 'pointer' }}
         >
           <input {...getInputProps()} />
           <div className="space-y-4">
