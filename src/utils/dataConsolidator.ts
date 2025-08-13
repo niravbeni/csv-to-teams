@@ -71,8 +71,11 @@ const isRealPersonName = (name: string): boolean => {
     return false;
   }
   
+  // Remove titles and parenthetical content before checking
+  const nameForCheck = normalizeName(trimmed);
+  
   // Check for basic name pattern (at least 2 words, reasonable length)
-  const words = trimmed.split(/\s+/).filter(word => word.length > 0);
+  const words = nameForCheck.split(/\s+/).filter(word => word.length > 0);
   
   // Must have at least 2 words (first name, last name) and each word should be reasonable length
   if (words.length < 2) return false;
@@ -80,7 +83,8 @@ const isRealPersonName = (name: string): boolean => {
   // Each word should be mostly letters and reasonable length
   for (const word of words) {
     if (word.length < 2 || word.length > 20) return false;
-    if (!/^[a-zA-Z\-'\.]+$/.test(word)) return false; // Allow letters, hyphens, apostrophes, dots
+    // More permissive regex that handles normalized characters
+    if (!/^[a-zA-Z\-'\.]+$/.test(word)) return false;
   }
   
   return true;
@@ -424,6 +428,13 @@ export const consolidateCABSData = (
   console.log(`- "Ms Zoë Hughes" -> "${normalizeName('Ms Zoë Hughes')}"`)
   if (morrisFound) console.log(`- Raw Morris "${morrisFound}" -> "${normalizeName(morrisFound)}"`)
   if (hughesFound) console.log(`- Raw Hughes "${hughesFound}" -> "${normalizeName(hughesFound)}"`)
+
+  // SPECIFIC TEST FOR isRealPersonName function
+  console.log('🧪 isRealPersonName TEST:');
+  console.log(`- isRealPersonName("Mr James Morris (ALS)"): ${isRealPersonName('Mr James Morris (ALS)')}`);
+  console.log(`- isRealPersonName("Ms Zoë Hughes"): ${isRealPersonName('Ms Zoë Hughes')}`);
+  console.log(`- isRealPersonName("james morris"): ${isRealPersonName('james morris')}`);
+  console.log(`- isRealPersonName("zoe hughes"): ${isRealPersonName('zoe hughes')}`);
 
   // Log all raw visitor host names for debugging
   console.log('=== ALL RAW VISITOR HOST NAMES ===');
