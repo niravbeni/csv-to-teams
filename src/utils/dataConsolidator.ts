@@ -409,6 +409,11 @@ export const consolidateCABSData = (
     const isRealPerson = isRealPersonName(host);
     const normalized = normalizeName(host);
     console.log(`${idx + 1}. "${host}" -> normalized: "${normalized}" -> real person: ${isRealPerson}`);
+    
+    // Special attention to our missing hosts
+    if (host.includes('Morris') || host.includes('Hughes') || host.includes('Zoë')) {
+      console.log(`  ⚠️  SPECIAL: "${host}" is ${isRealPerson ? 'INCLUDED' : 'FILTERED OUT'}`);
+    }
   });
 
   // Log all raw function room host names for debugging
@@ -439,6 +444,22 @@ export const consolidateCABSData = (
     );
     
     console.log(`"${expectedHost}" -> Found in Visitors: ${foundInVisitors}, Found in Function Rooms: ${foundInFunctionRooms}`);
+    
+    // Special debugging for the two missing hosts
+    if (expectedHost === 'Mr James Morris (ALS)' || expectedHost === 'Ms Zoë Hughes') {
+      console.log(`🔍 DEBUGGING ${expectedHost}:`);
+      console.log(`  - Normalized: "${normalizedExpected}"`);
+      console.log(`  - Looking for matches in visitors...`);
+      allRawVisitorHosts.forEach((rawHost, idx) => {
+        const rawNormalized = normalizeName(rawHost);
+        const exactMatch = rawNormalized === normalizedExpected;
+        const partialMatch1 = rawHost.toLowerCase().includes(expectedHost.toLowerCase());
+        const partialMatch2 = expectedHost.toLowerCase().includes(rawHost.toLowerCase());
+        if (exactMatch || partialMatch1 || partialMatch2 || rawHost.includes('Morris') || rawHost.includes('Hughes') || rawHost.includes('Zoë')) {
+          console.log(`    ${idx}: "${rawHost}" -> normalized: "${rawNormalized}" | exact: ${exactMatch} | partial1: ${partialMatch1} | partial2: ${partialMatch2}`);
+        }
+      });
+    }
   });
 
   // Combine both lists for complete host coverage
@@ -487,7 +508,7 @@ export const consolidateCABSData = (
   
   allUniqueHosts.forEach((hostName, index) => {
     console.log(`Processing host ${index + 1}/${allUniqueHosts.length}: "${hostName}"`);
-    
+
     // Find all function room bookings for this host
     const hostBookings = functionRoomRecords.filter(meeting => 
       normalizeName(meeting.hostRaw) === normalizeName(hostName) ||
@@ -506,6 +527,16 @@ export const consolidateCABSData = (
     
     console.log(`  - Found ${hostVisitors.length} visitors for ${hostName}`);
     
+    // Special debugging for missing hosts
+    if (hostName.includes('Morris') || hostName.includes('Hughes') || hostName.includes('Zoë')) {
+      console.log(`  🔍 SPECIAL DEBUG for "${hostName}":`);
+      console.log(`    - Normalized host name: "${normalizeName(hostName)}"`);
+      console.log(`    - Bookings found: ${hostBookings.length}`);
+      console.log(`    - Visitors found: ${hostVisitors.length}`);
+      console.log(`    - Visitor details:`, hostVisitors.map(v => v.visitorName));
+      console.log(`    - Will be ${hostVisitors.length > 0 ? 'INCLUDED' : 'EXCLUDED'} (needs visitors)`);
+    }
+
     // Only include hosts who have visitors (guests)
     if (hostVisitors.length > 0) {
       if (hostBookings.length > 0) {
