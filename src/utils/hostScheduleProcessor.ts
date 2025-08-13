@@ -1,25 +1,27 @@
 import { MasterMeetingRecord } from '@/types/masterMeeting';
 import { HostSchedule, HostBooking, HostScheduleResult } from '@/types/hostSchedule';
 
-// Helper function to format host name properly (Title Firstname Lastname)
+// Helper function to format host name properly (Firstname Lastname without title)
 const formatHostName = (hostRaw: string): string => {
   const parts = hostRaw.trim().split(' ').filter(part => part.length > 0);
   
-  if (parts.length >= 3) {
+  // Check if it starts with a title (Mr, Mrs, Ms, Miss, Dr, Prof)
+  const titles = ['mr', 'mrs', 'ms', 'miss', 'dr', 'prof'];
+  const firstPartLower = parts[0]?.toLowerCase();
+  
+  if (parts.length >= 3 && titles.includes(firstPartLower)) {
+    // Format: "Title FirstName LastName" -> return "FirstName LastName"
+    const firstName = parts[1];
+    const lastName = parts[2];
+    return `${firstName} ${lastName}`;
+  } else if (parts.length >= 3) {
+    // Format: "LastName FirstName Title" -> return "FirstName LastName"
     const lastName = parts[0];
     const firstName = parts[1];
-    let title = parts[2];
-    
-    // Normalize titles to proper format
-    title = title.toLowerCase();
-    if (title === 'mr') title = 'Mr';
-    else if (title === 'mrs') title = 'Mrs';
-    else if (title === 'ms' || title === 'miss') title = 'Ms';
-    else if (title === 'dr') title = 'Dr';
-    else if (title === 'prof') title = 'Prof';
-    else title = title.charAt(0).toUpperCase() + title.slice(1);
-    
-    return `${title} ${firstName} ${lastName}`;
+    return `${firstName} ${lastName}`;
+  } else if (parts.length === 2) {
+    // Handle cases where it might already be in "Firstname Lastname" format
+    return `${parts[0]} ${parts[1]}`;
   }
   
   return hostRaw;

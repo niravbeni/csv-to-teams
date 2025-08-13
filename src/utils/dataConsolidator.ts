@@ -545,11 +545,22 @@ export const consolidateCABSData = (
     console.log(`Processing host ${index + 1}/${allUniqueHosts.length}: "${hostName}"`);
 
     // Find all function room bookings for this host
-    const hostBookings = functionRoomRecords.filter(meeting => 
-      normalizeName(meeting.hostRaw) === normalizeName(hostName) ||
-      meeting.hostRaw.toLowerCase().includes(hostName.toLowerCase()) ||
-      hostName.toLowerCase().includes(meeting.hostRaw.toLowerCase())
-    );
+    const hostBookings = functionRoomRecords.filter(meeting => {
+      const meetingHostNormalized = normalizeName(meeting.hostRaw);
+      const targetHostNormalized = normalizeName(hostName);
+      
+      // Extract name parts for better matching
+      const meetingNameParts = extractFirstLastName(meeting.hostRaw);
+      const targetNameParts = extractFirstLastName(hostName);
+      
+      // Try multiple matching strategies
+      const exactMatch = meetingHostNormalized === targetHostNormalized;
+      const reverseMatch = meetingNameParts.first === targetNameParts.last && meetingNameParts.last === targetNameParts.first;
+      const containsMatch = meeting.hostRaw.toLowerCase().includes(hostName.toLowerCase()) ||
+                           hostName.toLowerCase().includes(meeting.hostRaw.toLowerCase());
+      
+      return exactMatch || reverseMatch || containsMatch;
+    });
     
     console.log(`  - Found ${hostBookings.length} bookings for ${hostName}`);
     

@@ -128,6 +128,13 @@
   input[type="reset"]:not([disabled]),
   select:not([disabled]),
   .dropzone {
-    cursor: pointer;
+    cursor: pointer !important;
+  }
+  
+  /* Additional specificity for shadcn/ui buttons */
+  button:not([disabled]):not(.cursor-default),
+  .inline-flex:not([disabled]):not(.cursor-default),
+  [data-slot="button"]:not([disabled]):not(.cursor-default) {
+    cursor: pointer !important;
   }
 }
