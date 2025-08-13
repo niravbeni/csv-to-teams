@@ -82,7 +82,11 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
   if (uploadStatus === 'success') {
     return (
       <div className="space-y-4">
-        <div {...getRootProps()} className={getDropzoneClasses()}>
+        <div 
+          {...getRootProps()} 
+          className={getDropzoneClasses()}
+          style={{ cursor: 'pointer' }}
+        >
           <input {...getInputProps()} />
           <div className="space-y-4">
             <CheckCircle className="h-12 w-12 text-green-600 mx-auto" />
@@ -112,7 +116,11 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
 
   if (uploadStatus === 'error') {
     return (
-      <div {...getRootProps()} className={getDropzoneClasses()}>
+      <div 
+        {...getRootProps()} 
+        className={getDropzoneClasses()}
+        style={{ cursor: 'pointer' }}
+      >
         <input {...getInputProps()} />
         <div className="space-y-4">
           <AlertCircle className="h-12 w-12 text-destructive mx-auto" />
@@ -131,9 +139,13 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
   }
 
   return (
-    <div {...getRootProps()} className={getDropzoneClasses()}>
-      <input {...getInputProps()} />
-      <div className="space-y-4">
+          <div 
+        {...getRootProps()} 
+        className={getDropzoneClasses()}
+        style={{ cursor: 'pointer' }}
+      >
+        <input {...getInputProps()} />
+        <div className="space-y-4">
         {isDragActive ? (
           <Upload className="h-12 w-12 text-primary mx-auto" />
         ) : (

@@ -137,4 +137,20 @@
   [data-slot="button"]:not([disabled]):not(.cursor-default) {
     cursor: pointer !important;
   }
+  
+  /* Specific targeting for file upload dropzones */
+  [role="button"],
+  div[style*="cursor"],
+  .border-dashed,
+  .border-2.border-dashed,
+  *:has(input[type="file"]),
+  div:has(input[type="file"]) {
+    cursor: pointer !important;
+  }
+  
+  /* Override any conflicting cursor styles on dropzone areas */
+  div.border-2.border-dashed.rounded-lg,
+  div.transition-all {
+    cursor: pointer !important;
+  }
 }

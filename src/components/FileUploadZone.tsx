@@ -175,9 +175,13 @@ export default function FileUploadZone({
   }
 
   // Default upload state
-  return (
-    <div {...getRootProps()} className={getDropzoneClasses()}>
-      <input {...getInputProps()} />
+        return (
+        <div 
+          {...getRootProps()} 
+          className={getDropzoneClasses()}
+          style={{ cursor: 'pointer' }}
+        >
+          <input {...getInputProps()} />
       <div className="space-y-3">
         <div className="flex items-center justify-center">
           {isDragActive ? (
