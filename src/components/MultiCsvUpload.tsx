@@ -271,7 +271,6 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
                   onClick={handleReset}
                   disabled={consolidationInProgress}
                   className="cursor-pointer"
-                  style={{ cursor: 'pointer' }}
                 >
                   Reset All
                 </Button>
@@ -279,7 +278,6 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
                   onClick={handleConsolidateData}
                   disabled={consolidationInProgress}
                   className="cursor-pointer"
-                  style={{ cursor: 'pointer' }}
                 >
                   {consolidationInProgress ? 'Processing...' : 'Generate Meeting List'}
                 </Button>

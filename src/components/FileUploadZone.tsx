@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useEffect, useRef } from 'react';
+import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -15,8 +15,6 @@ export default function FileUploadZone({
   status, 
   isDisabled 
 }: FileUploadZoneProps) {
-  const dropzoneRef = useRef<HTMLDivElement>(null);
-
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0 && !isDisabled) {
       onFileUploaded(acceptedFiles[0], fileType);
@@ -32,36 +30,6 @@ export default function FileUploadZone({
     multiple: false,
     disabled: isDisabled
   });
-
-  // Force cursor pointer on the dropzone
-  useEffect(() => {
-    const dropzoneElement = dropzoneRef.current;
-    if (dropzoneElement) {
-      // Force cursor pointer aggressively
-      const forceCursor = () => {
-        dropzoneElement.style.setProperty('cursor', 'pointer', 'important');
-        
-        // Force it on all child elements
-        const allElements = dropzoneElement.querySelectorAll('*');
-        allElements.forEach((element: Element) => {
-          (element as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
-        });
-      };
-      
-      // Apply immediately
-      forceCursor();
-      
-      // Apply on mouse events
-      dropzoneElement.addEventListener('mouseenter', forceCursor);
-      dropzoneElement.addEventListener('mouseover', forceCursor);
-      
-      // Cleanup
-      return () => {
-        dropzoneElement.removeEventListener('mouseenter', forceCursor);
-        dropzoneElement.removeEventListener('mouseover', forceCursor);
-      };
-    }
-  }, [isDisabled, status.status]);
 
   const getZoneConfig = () => {
     switch (fileType) {
@@ -210,8 +178,6 @@ export default function FileUploadZone({
         <div 
           {...getRootProps()} 
           className={getDropzoneClasses()}
-          style={{ cursor: 'pointer' }}
-          ref={dropzoneRef}
         >
           <input {...getInputProps()} />
       <div className="space-y-3">

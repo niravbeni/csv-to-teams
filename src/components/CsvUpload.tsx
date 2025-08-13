@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState, useEffect, useRef } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,7 +19,6 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [fileName, setFileName] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
-  const dropzoneRef = useRef<HTMLDivElement>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0 || isProcessing) return;
@@ -39,36 +38,6 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
       setErrorMessage(error instanceof Error ? error.message : 'Failed to parse CSV file');
     }
   }, [onDataParsed, isProcessing]);
-
-  // Force cursor pointer on the dropzone
-  useEffect(() => {
-    const dropzoneElement = dropzoneRef.current;
-    if (dropzoneElement) {
-      // Force cursor pointer aggressively
-      const forceCursor = () => {
-        dropzoneElement.style.setProperty('cursor', 'pointer', 'important');
-        
-        // Force it on all child elements
-        const allElements = dropzoneElement.querySelectorAll('*');
-        allElements.forEach((element: Element) => {
-          (element as HTMLElement).style.setProperty('cursor', 'pointer', 'important');
-        });
-      };
-      
-      // Apply immediately
-      forceCursor();
-      
-      // Apply on mouse events
-      dropzoneElement.addEventListener('mouseenter', forceCursor);
-      dropzoneElement.addEventListener('mouseover', forceCursor);
-      
-      // Cleanup
-      return () => {
-        dropzoneElement.removeEventListener('mouseenter', forceCursor);
-        dropzoneElement.removeEventListener('mouseover', forceCursor);
-      };
-    }
-  }, [isProcessing, uploadStatus]);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
@@ -150,8 +119,6 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
       <div 
         {...getRootProps()} 
         className={getDropzoneClasses()}
-        style={{ cursor: 'pointer' }}
-        ref={dropzoneRef}
       >
         <input {...getInputProps()} />
         <div className="space-y-4">
@@ -174,8 +141,6 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
           <div 
         {...getRootProps()} 
         className={getDropzoneClasses()}
-        style={{ cursor: 'pointer' }}
-        ref={dropzoneRef}
       >
         <input {...getInputProps()} />
         <div className="space-y-4">
