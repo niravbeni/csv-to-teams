@@ -10,10 +10,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import MultiCsvUpload from '@/components/MultiCsvUpload';
 import MasterPreview from '@/components/MasterPreview';
+import HostSchedulePreview from '@/components/HostSchedulePreview';
 import { MasterMeetingRecord } from '@/types/masterMeeting';
+import { HostScheduleResult } from '@/types/hostSchedule';
+import { groupMeetingsByHost } from '@/utils/hostScheduleProcessor';
 
 export default function Home() {
   const [masterMeetings, setMasterMeetings] = useState<MasterMeetingRecord[]>([]);
+  const [hostSchedules, setHostSchedules] = useState<HostScheduleResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState('');
@@ -43,9 +47,14 @@ export default function Home() {
     
     setTimeout(() => {
       setMasterMeetings(meetings);
+      
+      // Generate host-centric data
+      const hostScheduleResult = groupMeetingsByHost(meetings);
+      setHostSchedules(hostScheduleResult);
+      
       setIsProcessing(false);
       
-      toast.success(`Consolidated ${meetings.length} meeting(s) from CABS data`);
+      toast.success(`Generated ${hostScheduleResult.statistics.totalHosts} host schedule(s) from ${meetings.length} meeting(s)`);
     }, 500);
   };
 
@@ -133,7 +142,7 @@ export default function Home() {
               <h1 className="text-3xl font-bold text-foreground">CSV to Teams</h1>
             </div>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Upload CABS CSV files and send consolidated meeting schedules to Microsoft Teams
+              Upload CABS CSV files and send host-centric daily schedules to Microsoft Teams
             </p>
           </div>
 
@@ -172,7 +181,7 @@ export default function Home() {
                 <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>Upload CABS CSV Files</CardTitle>
               </div>
-              <CardDescription>Upload Function Room Report + Visitor Arrival List to generate the meeting list</CardDescription>
+              <CardDescription>Upload Function Room Report + Visitor Arrival List to generate host daily schedules</CardDescription>
             </CardHeader>
             <CardContent>
               <MultiCsvUpload onDataParsed={handleDataParsed} isProcessing={isProcessing} />
@@ -180,18 +189,19 @@ export default function Home() {
           </Card>
 
           {/* Master Preview */}
-          {masterMeetings.length > 0 && (
+          {hostSchedules && hostSchedules.hostSchedules.length > 0 && (
             <Card>
               <CardContent className="pt-6">
-                <MasterPreview 
-                  meetings={masterMeetings} 
+                <HostSchedulePreview 
+                  hostSchedules={hostSchedules} 
                   onSendMessage={handleSendMessage} 
                   isSending={isSending}
-                  messageMode={messageMode}
                 />
               </CardContent>
             </Card>
           )}
+
+
 
 
         </div>

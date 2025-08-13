@@ -70,4 +70,5 @@ export enum MeetingSource {
   FUNCTION_ROOM = 'Function Room Report',
   FUNCTION_SUMMARY = 'Function Summary Report',
   TRAINING_ROOM = 'Training Room Report',
+  VISITOR_LIST = 'Visitor Arrival List',
 } 

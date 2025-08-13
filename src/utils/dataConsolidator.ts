@@ -40,6 +40,50 @@ const extractFirstLastName = (fullName: string): { first: string; last: string; 
   };
 };
 
+// Helper function to check if a name looks like a real person (firstname lastname pattern)
+const isRealPersonName = (name: string): boolean => {
+  if (!name || name.trim().length === 0) return false;
+  
+  const trimmed = name.trim();
+  
+  // Skip obvious non-person entries
+  const nonPersonPatterns = [
+    'clear room check',
+    'room check', 
+    'clear room',
+    'maintenance', 
+    'cleaning',
+    'setup',
+    'occupied',
+    'available',
+    'reserved',
+    'blocked',
+    'system',
+    'admin',
+    'test',
+    'check'
+  ];
+  
+  const lowerName = trimmed.toLowerCase();
+  if (nonPersonPatterns.some(pattern => lowerName.includes(pattern))) {
+    return false;
+  }
+  
+  // Check for basic name pattern (at least 2 words, reasonable length)
+  const words = trimmed.split(/\s+/).filter(word => word.length > 0);
+  
+  // Must have at least 2 words (first name, last name) and each word should be reasonable length
+  if (words.length < 2) return false;
+  
+  // Each word should be mostly letters and reasonable length
+  for (const word of words) {
+    if (word.length < 2 || word.length > 20) return false;
+    if (!/^[a-zA-Z\-'\.]+$/.test(word)) return false; // Allow letters, hyphens, apostrophes, dots
+  }
+  
+  return true;
+};
+
 const calculateDuration = (startTime: string, endTime: string): string => {
   try {
     const [startHour, startMin] = startTime.split(':').map(Number);
@@ -322,102 +366,185 @@ export const consolidateCABSData = (
   console.log('Input data counts:');
   console.log('- Function Rooms:', functionRooms.length);
   console.log('- Visitors:', visitors.length);
-  console.log('NOTE: Only using Function Room + Visitors for ~21 meetings');
+  console.log('NEW APPROACH: Starting with ALL hosts from Visitor List (expecting 31 unique hosts)');
   
   console.log('Sample Function Room data:', functionRooms.slice(0, 3));
   console.log('Sample Visitor data:', visitors.slice(0, 3));
-  
+
+  // Expected hosts from the user's list for comparison
+  const expectedHosts = [
+    'Mrs Samantha Heidrey', 'Ms Aedamar Comiskey', 'Mr Yin Lam', 'Mr Ross Schloeffel',
+    'Mr Greg Baker', 'Mr Nathan Cornell', 'Ms Sophie Bark', 'Ms Olesja Dobrowolska',
+    'Mr James Morris (ALS)', 'Miss Evie Sandwell', 'Mrs Lauren Oesman', 'Mr Daniel Martinez',
+    'Miss Leah Ermias', 'Miss Devinder Dabasia', 'Ms Zoë Hughes', 'Ms Herbie Mudhar',
+    'Mrs Angela Ogilvie', 'Ms Clare McMullen', 'Ms Catherine Shearn', 'Miss Jane Percy',
+    'Ms Katherine Davis', 'Mr Guy Patey', 'Miss Samantha Lee', 'Mrs Rachel Hemelryk',
+    'Mr Alastair Bain', 'Mrs Garima Gupta', 'Miss Anastasia Caneschi', 'Mr Conor Manders',
+    'Mr Jack Shand', 'Mr Rory Conway', 'Ms Anne Kaiser'
+  ];
+
+  console.log('=== EXPECTED HOSTS ANALYSIS ===');
+  console.log('Expected hosts:', expectedHosts.length);
+
   // Detailed host name analysis for verification
   console.log('=== HOST NAME ANALYSIS ===');
-  console.log('Function Room hosts (first 10):');
-  functionRooms.slice(0, 10).forEach((room, idx) => {
-    console.log(`  ${idx}: "${room.contact}" -> normalized: "${normalizeName(room.contact)}"`);
+  // STEP 1: Extract ALL unique hosts from BOTH CSVs
+  const hostsFromFunctionRooms = [...new Set(functionRooms
+    .map(f => f.contact?.trim())
+    .filter(name => name && name.length > 0 && isRealPersonName(name))
+  )];
+
+  const hostsFromVisitors = [...new Set(visitors
+    .map(v => v.hostName?.trim())
+    .filter(name => name && name.length > 0 && isRealPersonName(name))
+  )];
+
+  // Log all raw visitor host names for debugging
+  console.log('=== ALL RAW VISITOR HOST NAMES ===');
+  const allRawVisitorHosts = visitors.map(v => v.hostName?.trim()).filter(name => name && name.length > 0);
+  console.log('Total raw visitor host names:', allRawVisitorHosts.length);
+  allRawVisitorHosts.forEach((host, idx) => {
+    const isRealPerson = isRealPersonName(host);
+    const normalized = normalizeName(host);
+    console.log(`${idx + 1}. "${host}" -> normalized: "${normalized}" -> real person: ${isRealPerson}`);
   });
-  
-  console.log('Visitor hosts (first 10):');
-  visitors.slice(0, 10).forEach((visitor, idx) => {
-    console.log(`  ${idx}: "${visitor.hostName}" -> normalized: "${normalizeName(visitor.hostName)}"`);
+
+  // Log all raw function room host names for debugging
+  console.log('=== ALL RAW FUNCTION ROOM HOST NAMES ===');
+  const allRawFunctionHosts = functionRooms.map(f => f.contact?.trim()).filter(name => name && name.length > 0);
+  console.log('Total raw function room host names:', allRawFunctionHosts.length);
+  allRawFunctionHosts.slice(0, 20).forEach((host, idx) => {
+    const isRealPerson = isRealPersonName(host);
+    const normalized = normalizeName(host);
+    console.log(`${idx + 1}. "${host}" -> normalized: "${normalized}" -> real person: ${isRealPerson}`);
   });
+
+  // Check which expected hosts are found in our data
+  console.log('=== EXPECTED HOST MATCHING ===');
+  expectedHosts.forEach(expectedHost => {
+    const normalizedExpected = normalizeName(expectedHost);
+    
+    const foundInVisitors = allRawVisitorHosts.some(rawHost => 
+      normalizeName(rawHost) === normalizedExpected ||
+      rawHost.toLowerCase().includes(expectedHost.toLowerCase()) ||
+      expectedHost.toLowerCase().includes(rawHost.toLowerCase())
+    );
+    
+    const foundInFunctionRooms = allRawFunctionHosts.some(rawHost => 
+      normalizeName(rawHost) === normalizedExpected ||
+      rawHost.toLowerCase().includes(expectedHost.toLowerCase()) ||
+      expectedHost.toLowerCase().includes(rawHost.toLowerCase())
+    );
+    
+    console.log(`"${expectedHost}" -> Found in Visitors: ${foundInVisitors}, Found in Function Rooms: ${foundInFunctionRooms}`);
+  });
+
+  // Combine both lists for complete host coverage
+  const allUniqueHosts = [...new Set([...hostsFromFunctionRooms, ...hostsFromVisitors])];
   
-  // Check for potential matches
-  const functionRoomHostsNormalized = functionRooms.map(r => normalizeName(r.contact));
-  const visitorHostsNormalized = visitors.map(v => normalizeName(v.hostName));
-  const exactMatches = functionRoomHostsNormalized.filter(h => visitorHostsNormalized.includes(h));
-  console.log(`Exact normalized host matches: ${exactMatches.length}`);
-  console.log('Sample exact matches:', exactMatches.slice(0, 5));
+  console.log('=== HOST EXTRACTION ===');
+  console.log('Hosts from Function Rooms:', hostsFromFunctionRooms.length);
+  console.log('Hosts from Visitor List:', hostsFromVisitors.length);
+  console.log('Total unique hosts:', allUniqueHosts.length);
+  console.log('Sample hosts:', allUniqueHosts.slice(0, 10), '...');
   
-  // Only convert function room data to master meeting records
+  // STEP 2: Convert function room data to master meeting records
   let functionRoomRecords = functionRooms.map(convertFunctionRoom);
   
   console.log('Raw Function Room Records:', functionRoomRecords.length);
   
-  // Filter to get real meetings (not maintenance, clearing, etc.)
+  // Filter to include ALL legitimate meetings (keep everything except obvious maintenance)
   functionRoomRecords = functionRoomRecords.filter((meeting, index) => {
     const purpose = meeting.purpose.toLowerCase();
     const roomUse = (meeting.originalData as unknown as FunctionRoomData).roomUse.toLowerCase();
     
-    // More aggressive filtering for the ~21 real meetings
-    const isRealMeeting = !purpose.includes('clear') && 
-                         !purpose.includes('maintenance') && 
-                         !purpose.includes('check') &&
-                         !purpose.includes('occupied') &&
-                         !purpose.includes('setting up') &&
-                         !purpose.includes('set up') &&
-                         !roomUse.includes('other') &&
-                         meeting.attendeeCount >= 2 && // At least 2 people
-                         meeting.purpose.trim().length > 10 && // Longer purpose descriptions
-                         !meeting.purpose.toLowerCase().includes('internal meeting') && // Skip generic internal meetings
-                         meeting.roomCode; // Must have a room code
+    // Filter out maintenance activities and non-person hosts
+    const isValidMeeting = !purpose.includes('clear') && 
+                          !purpose.includes('maintenance') && 
+                          !purpose.includes('cleaning') &&
+                          !purpose.includes('setting up') &&
+                          !purpose.includes('set up') &&
+                          !purpose.includes('check') &&
+                          !purpose.includes('occupied') &&
+                          meeting.purpose.trim().length > 5 && // Very minimal length check
+                          meeting.host.trim().length > 0 && // Must have a host
+                          isRealPersonName(meeting.hostRaw); // Must be a real person name
     
-    if (index < 15) {
-      console.log(`Meeting ${index}: "${meeting.purpose}" | Room Use: "${roomUse}" | Code: "${meeting.roomCode}" | Attendees: ${meeting.attendeeCount} | Real: ${isRealMeeting}`);
+    if (index < 20 || !isValidMeeting) {
+      console.log(`Meeting ${index}: "${meeting.purpose}" | Host: "${meeting.hostRaw}" | Room Use: "${roomUse}" | Valid: ${isValidMeeting}`);
     }
     
-    return isRealMeeting;
+    return isValidMeeting;
   });
   
-  console.log('Filtered Function Room Records (real meetings):', functionRoomRecords.length);
+  console.log('Filtered Function Room Records (all valid meetings):', functionRoomRecords.length);
   
-  // Combine all meetings (just function room now)
-  let allMeetings = [...functionRoomRecords];
+  // STEP 3: Create a master record for EACH host from visitor list (ensuring we get all 31)
+  console.log('=== CREATING HOST RECORDS ===');
+  const allMeetings: MasterMeetingRecord[] = [];
   
-  // Remove duplicates based on meeting ID
-  const seenIds = new Set<string>();
-  allMeetings = allMeetings.filter(meeting => {
-    if (seenIds.has(meeting.meetingId)) {
-      return false;
-    }
-    seenIds.add(meeting.meetingId);
-    return true;
-  });
-  
-  // Match visitors to hosts
-  const visitorMatches = matchVisitorsToHosts(allMeetings, visitors);
-  
-  // Update meetings with guest information AND filter to only meetings with guests
-  allMeetings = allMeetings.map(meeting => {
-    const matchedVisitors = visitorMatches.find(match => 
-      match.hostName === meeting.host || 
-      normalizeName(match.hostNameRaw) === meeting.host
+  allUniqueHosts.forEach((hostName, index) => {
+    console.log(`Processing host ${index + 1}/${allUniqueHosts.length}: "${hostName}"`);
+    
+    // Find all function room bookings for this host
+    const hostBookings = functionRoomRecords.filter(meeting => 
+      normalizeName(meeting.hostRaw) === normalizeName(hostName) ||
+      meeting.hostRaw.toLowerCase().includes(hostName.toLowerCase()) ||
+      hostName.toLowerCase().includes(meeting.hostRaw.toLowerCase())
     );
     
-    return {
-      ...meeting,
-      guests: matchedVisitors?.visitors || []
-    };
-  }).filter(meeting => {
-    // ONLY keep meetings that have actual guests (visitors)
-    const hasGuests = meeting.guests.length > 0;
-    console.log(`Meeting "${meeting.meetingName}" by ${meeting.hostRaw} has ${meeting.guests.length} guests - ${hasGuests ? 'KEEPING' : 'REMOVING'}`);
-    return hasGuests;
+    console.log(`  - Found ${hostBookings.length} bookings for ${hostName}`);
+    
+    // Find all visitors for this host
+    const hostVisitors = visitors.filter(visitor => 
+      normalizeName(visitor.hostName) === normalizeName(hostName) ||
+      visitor.hostName.toLowerCase().includes(hostName.toLowerCase()) ||
+      hostName.toLowerCase().includes(visitor.hostName.toLowerCase())
+    );
+    
+    console.log(`  - Found ${hostVisitors.length} visitors for ${hostName}`);
+    
+    // Only include hosts who have visitors (guests)
+    if (hostVisitors.length > 0) {
+      if (hostBookings.length > 0) {
+        // Host has both bookings and visitors - add each booking as a separate meeting record
+        hostBookings.forEach(booking => {
+          allMeetings.push({
+            ...booking,
+            guests: hostVisitors.map(v => v.visitorName).filter(name => name)
+          });
+        });
+      } else {
+        // Host has no bookings but has visitors - create a minimal record
+        allMeetings.push({
+          meetingId: `host-${index}`,
+          meetingName: `Meetings with ${hostName}`,
+          meetingType: MeetingType.OTHER,
+          host: normalizeName(hostName),
+          hostRaw: hostName,
+          guests: hostVisitors.map(v => v.visitorName).filter(name => name),
+          attendeeCount: hostVisitors.length,
+          purpose: 'Visitor meetings',
+          room: 'TBD',
+          roomCategory: RoomCategory.OTHER,
+          date: new Date().toISOString().split('T')[0],
+          startTime: 'TBD',
+          endTime: 'TBD', 
+          duration: 'TBD',
+          source: MeetingSource.VISITOR_LIST,
+          originalData: { hostName } as Record<string, unknown>
+        });
+      }
+    } else {
+      console.log(`  - SKIPPING ${hostName} (no visitors)`);
+    }
   });
+  
+  console.log(`Created ${allMeetings.length} total meeting records from ${allUniqueHosts.length} hosts`);
   
   // Calculate statistics
   const totalVisitors = visitors.length;
-  const unmatchedVisitors = visitorMatches.reduce(
-    (acc, match) => acc + match.unmatchedVisitors.length, 
-    0
-  );
+  const totalAssignedVisitors = allMeetings.reduce((sum, meeting) => sum + meeting.guests.length, 0);
   
   const meetingsByType = allMeetings.reduce((acc, meeting) => {
     acc[meeting.meetingType] = (acc[meeting.meetingType] || 0) + 1;
@@ -431,13 +558,13 @@ export const consolidateCABSData = (
   
   const result = {
     masterRecords: allMeetings,
-    visitorMatches,
+    visitorMatches: [], // Not using the old matching system
     statistics: {
       totalMeetings: allMeetings.length,
       totalVisitors,
       meetingsByType,
       meetingsBySource,
-      unmatchedVisitors
+      unmatchedVisitors: totalVisitors - totalAssignedVisitors
     }
   };
   
