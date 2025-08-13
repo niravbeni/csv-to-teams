@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -9,13 +9,14 @@ import { Badge } from '@/components/ui/badge';
 import { FileUploadZoneProps, CABSFileType } from '@/types/masterMeeting';
 
 // Individual file upload zone for specific CABS file types
-export default function FileUploadZone({
-  fileType,
-  status,
-  onFileUploaded,
-  isDisabled
+export default function FileUploadZone({ 
+  fileType, 
+  onFileUploaded, 
+  status, 
+  isDisabled 
 }: FileUploadZoneProps) {
-  
+  const dropzoneRef = useRef<HTMLDivElement>(null);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0 && !isDisabled) {
       onFileUploaded(acceptedFiles[0], fileType);
@@ -31,6 +32,20 @@ export default function FileUploadZone({
     multiple: false,
     disabled: isDisabled
   });
+
+  // Force cursor pointer on the dropzone
+  useEffect(() => {
+    const dropzoneElement = dropzoneRef.current;
+    if (dropzoneElement && !isDisabled) {
+      dropzoneElement.style.cursor = 'pointer';
+      
+      // Also force it on all child elements
+      const allChildren = dropzoneElement.querySelectorAll('*');
+      allChildren.forEach((child: Element) => {
+        (child as HTMLElement).style.cursor = 'pointer';
+      });
+    }
+  }, [isDisabled, status.status]);
 
   const getZoneConfig = () => {
     switch (fileType) {
@@ -180,6 +195,7 @@ export default function FileUploadZone({
           {...getRootProps()} 
           className={getDropzoneClasses()}
           style={{ cursor: 'pointer' }}
+          ref={dropzoneRef}
         >
           <input {...getInputProps()} />
       <div className="space-y-3">

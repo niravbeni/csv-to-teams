@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,17 +16,17 @@ interface CsvUploadProps {
 }
 
 export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps) {
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
   const [fileName, setFileName] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const dropzoneRef = useRef<HTMLDivElement>(null);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    
-    if (!file) return;
+    if (acceptedFiles.length === 0 || isProcessing) return;
 
+    const file = acceptedFiles[0];
     setFileName(file.name);
-    setUploadStatus('idle');
+    setUploadStatus('uploading');
     setErrorMessage('');
 
     try {
@@ -34,10 +34,25 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
       onDataParsed(meetings);
       setUploadStatus('success');
     } catch (error) {
+      console.error('Error parsing CSV file:', error);
       setUploadStatus('error');
       setErrorMessage(error instanceof Error ? error.message : 'Failed to parse CSV file');
     }
-  }, [onDataParsed]);
+  }, [onDataParsed, isProcessing]);
+
+  // Force cursor pointer on the dropzone
+  useEffect(() => {
+    const dropzoneElement = dropzoneRef.current;
+    if (dropzoneElement && !isProcessing) {
+      dropzoneElement.style.cursor = 'pointer';
+      
+      // Also force it on all child elements
+      const allChildren = dropzoneElement.querySelectorAll('*');
+      allChildren.forEach((child: Element) => {
+        (child as HTMLElement).style.cursor = 'pointer';
+      });
+    }
+  }, [isProcessing, uploadStatus]);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
@@ -120,6 +135,7 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
         {...getRootProps()} 
         className={getDropzoneClasses()}
         style={{ cursor: 'pointer' }}
+        ref={dropzoneRef}
       >
         <input {...getInputProps()} />
         <div className="space-y-4">
@@ -143,6 +159,7 @@ export default function CsvUpload({ onDataParsed, isProcessing }: CsvUploadProps
         {...getRootProps()} 
         className={getDropzoneClasses()}
         style={{ cursor: 'pointer' }}
+        ref={dropzoneRef}
       >
         <input {...getInputProps()} />
         <div className="space-y-4">
