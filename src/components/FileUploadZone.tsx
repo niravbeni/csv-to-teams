@@ -38,7 +38,7 @@ export default function FileUploadZone({
           title: 'Function Room Report',
           description: 'Room bookings and meeting details',
           icon: '🏢',
-          example: 'Function Summary Report (By Room)'
+          example: 'Function Room Report'
         };
       case CABSFileType.FUNCTION_SUMMARY:
         return {

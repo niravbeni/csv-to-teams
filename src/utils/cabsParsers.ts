@@ -163,7 +163,7 @@ export const parseFunctionSummaryReport = (file: File): Promise<FunctionSummaryD
 };
 
 // Parse Training Room Report CSV
-// Column positions: BookingRef(12), Start(13), End(14), Covers(15), Contact(16), Purpose(17)
+// Column positions: Room(13), Start(14), End(15), Covers(16), Contact(17), Purpose(18)
 export const parseTrainingRoomReport = (file: File): Promise<TrainingRoomData[]> => {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
@@ -173,16 +173,16 @@ export const parseTrainingRoomReport = (file: File): Promise<TrainingRoomData[]>
         try {
           const cleanData = cleanCABSData(results.data as string[][], 'training-room');
           
-          const trainingRooms = cleanData.map(row => ({
-            bookingRef: row[12] || '',
-            startTime: row[13] || '',
-            endTime: row[14] || '',
-            covers: parseInt(row[15]) || 0,
-            contact: row[16] || '',
-            purpose: row[17] || ''
+          const trainingRooms = cleanData.map((row, index) => ({
+            bookingRef: `TR${Date.now()}-${index}`, // Generate a booking ref since not provided
+            startTime: row[14] || '',
+            endTime: row[15] || '',
+            covers: parseInt(row[16]) || 0,
+            contact: row[17] || '',
+            purpose: row[18] || ''
           })).filter(record => 
             // Filter out invalid records
-            record.bookingRef && record.contact && record.purpose
+            record.contact && record.purpose && record.startTime
           );
           
           resolve(trainingRooms);

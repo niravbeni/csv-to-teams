@@ -78,16 +78,26 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         throw new Error('Could not detect CABS file type. Please check file format.');
       }
       
-      if (detectedType !== expectedType && detectedType !== fileType) {
+      // Allow training-room files for function-room slot (legacy compatibility)
+      const isValidType = detectedType === expectedType || 
+                         detectedType === fileType ||
+                         (fileType === CABSFileType.FUNCTION_ROOM && detectedType === 'training-room');
+      
+      if (!isValidType) {
         throw new Error(`File appears to be a ${detectedType} file, but expected ${fileType}. Please check you uploaded the correct file.`);
       }
 
-      // Parse the file based on type
+      // Parse the file based on detected type and file slot
       let parsedData;
-      switch (fileType) {
-        case CABSFileType.FUNCTION_ROOM:
-          parsedData = await parseFunctionRoomReport(file);
-          break;
+      if (fileType === CABSFileType.FUNCTION_ROOM && detectedType === 'training-room') {
+        // Handle training room file uploaded to function room slot
+        parsedData = await parseTrainingRoomReport(file);
+      } else {
+        // Normal parsing based on expected file type
+        switch (fileType) {
+          case CABSFileType.FUNCTION_ROOM:
+            parsedData = await parseFunctionRoomReport(file);
+            break;
         case CABSFileType.FUNCTION_SUMMARY:
           parsedData = await parseFunctionSummaryReport(file);
           break;
@@ -99,6 +109,7 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
           break;
         default:
           throw new Error('Unsupported file type');
+        }
       }
 
       // Update status to success
