@@ -70,15 +70,29 @@ export default function HostSchedulePreview({
             <CardTitle className="text-base">
               Host Daily Schedules ({hostSchedules.hostSchedules.length} hosts)
             </CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleCopy} 
-              className="flex items-center gap-2 cursor-pointer"
-            >
-              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-              {copied ? 'Copied!' : 'Copy'}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const message = formattedMessages[0] || '';
+                  console.log('🍽️ TEAMS MESSAGE:', message);
+                  alert('Check console for full Teams message text (with catering info)');
+                }}
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                📝 View Raw
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopy} 
+                className="flex items-center gap-2 cursor-pointer"
+              >
+                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                {copied ? 'Copied!' : 'Copy'}
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -129,6 +143,21 @@ export default function HostSchedulePreview({
                               <div className="text-muted-foreground">
                                 <strong>Purpose:</strong> {booking.purpose}
                               </div>
+                              {booking.catering && (
+                                <div className="text-muted-foreground mt-1">
+                                  <strong>🍽️ Catering:</strong> {booking.catering.type.includes(' - ') 
+                                    ? booking.catering.type.split(' - ')[1] 
+                                    : booking.catering.type}
+                                  {booking.catering.details && (
+                                    <div className="text-xs mt-1 pl-4">
+                                      {booking.catering.details
+                                        .replace(/\d+\.\d+\s+td$/i, '') // Remove "XX.XX td" at end
+                                        .replace(/\r?\n\r?\n$/, '') // Remove trailing newlines
+                                        .trim()}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           ))}
                         </div>

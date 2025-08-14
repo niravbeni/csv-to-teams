@@ -65,10 +65,27 @@ export enum RoomCategory {
   OTHER = 'Other',
 }
 
+// Catering Report CSV structure
+export interface CateringRecord {
+  hostRaw: string;
+  hostNormalized: string;
+  room: string;
+  roomCode?: string;
+  meetStart: string;
+  meetEnd: string;
+  covers: number;
+  cateringType: string;
+  cateringDetails: string;
+  date: string;
+  bufferStart?: string;
+  bufferEnd?: string;
+}
+
 // Meeting source identification
 export enum MeetingSource {
   FUNCTION_ROOM = 'Function Room Report',
   FUNCTION_SUMMARY = 'Function Summary Report',
   TRAINING_ROOM = 'Training Room Report',
   VISITOR_LIST = 'Visitor Arrival List',
+  CATERING = 'Catering Report',
 } 

@@ -19,6 +19,7 @@ import {
   parseFunctionSummaryReport,
   parseTrainingRoomReport,
   parseVisitorArrivalList,
+  parseCateringReport,
   detectCABSFileType
 } from '@/utils/cabsParsers';
 import { consolidateCABSData } from '@/utils/dataConsolidator';
@@ -26,7 +27,8 @@ import {
   FunctionRoomData, 
   FunctionSummaryData, 
   TrainingRoomData, 
-  VisitorData 
+  VisitorData,
+  CateringRecord
 } from '@/types/cabsData';
 
 // Multi-CSV Upload Component
@@ -51,6 +53,11 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
     [CABSFileType.VISITOR_LIST]: {
       fileName: '',
       fileType: CABSFileType.VISITOR_LIST,
+      status: 'pending'
+    },
+    [CABSFileType.CATERING]: {
+      fileName: '',
+      fileType: CABSFileType.CATERING,
       status: 'pending'
     }
   });
@@ -107,6 +114,9 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         case CABSFileType.VISITOR_LIST:
           parsedData = await parseVisitorArrivalList(file);
           break;
+        case CABSFileType.CATERING:
+          parsedData = await parseCateringReport(file);
+          break;
         default:
           throw new Error('Unsupported file type');
         }
@@ -141,34 +151,36 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
     }
   }, []);
 
-  // Check if all required files are uploaded (only 2 files needed)
-  const requiredFiles = [CABSFileType.FUNCTION_ROOM, CABSFileType.VISITOR_LIST];
+  // Check if all required files are uploaded (3 files needed)
+  const requiredFiles = [CABSFileType.FUNCTION_ROOM, CABSFileType.VISITOR_LIST, CABSFileType.CATERING];
   const allFilesUploaded = requiredFiles.every(fileType => fileStatuses[fileType]?.status === 'success');
   const uploadedCount = requiredFiles.filter(fileType => fileStatuses[fileType]?.status === 'success').length;
-  const uploadProgress = (uploadedCount / 2) * 100;
+  const uploadProgress = (uploadedCount / 3) * 100;
 
   // Consolidate data from all files
   const handleConsolidateData = useCallback(async () => {
     if (!allFilesUploaded) {
-      toast.error('Please upload all 4 CSV files before processing');
+      toast.error('Please upload all 3 CSV files before processing');
       return;
     }
 
     setConsolidationInProgress(true);
 
     try {
-      // Extract data from file statuses (only using Function Room + Visitors)
+      // Extract data from file statuses (Function Room + Visitors + Catering)
       const functionRoomData = (fileStatuses[CABSFileType.FUNCTION_ROOM].data as unknown as FunctionRoomData[]) || [];
       const functionSummaryData: FunctionSummaryData[] = []; // Not used
       const trainingRoomData: TrainingRoomData[] = []; // Not used
       const visitorData = (fileStatuses[CABSFileType.VISITOR_LIST].data as unknown as VisitorData[]) || [];
+      const cateringData = (fileStatuses[CABSFileType.CATERING].data as unknown as CateringRecord[]) || [];
 
       // Consolidate data
       const consolidationResult = consolidateCABSData(
         functionRoomData,
         functionSummaryData,
         trainingRoomData,
-        visitorData
+        visitorData,
+        cateringData
       );
 
       // Pass consolidated data to parent
@@ -208,6 +220,11 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         fileName: '',
         fileType: CABSFileType.VISITOR_LIST,
         status: 'pending'
+      },
+      [CABSFileType.CATERING]: {
+        fileName: '',
+        fileType: CABSFileType.CATERING,
+        status: 'pending'
       }
     });
   }, []);
@@ -219,7 +236,7 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Upload Progress</span>
-            <span>{uploadedCount}/2 files uploaded</span>
+            <span>{uploadedCount}/3 files uploaded</span>
           </div>
           <Progress value={uploadProgress} className="w-full" />
         </div>
@@ -248,8 +265,8 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         </div>
       </div>
 
-      {/* File Upload Zones - Only 2 needed */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* File Upload Zones - 3 files needed */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FileUploadZone
           fileType={CABSFileType.FUNCTION_ROOM}
           status={fileStatuses[CABSFileType.FUNCTION_ROOM]}
@@ -260,6 +277,13 @@ export default function MultiCsvUpload({ onDataParsed, isProcessing }: MultiCSVU
         <FileUploadZone
           fileType={CABSFileType.VISITOR_LIST}
           status={fileStatuses[CABSFileType.VISITOR_LIST]}
+          onFileUploaded={handleFileUpload}
+          isDisabled={isProcessing || consolidationInProgress}
+        />
+
+        <FileUploadZone
+          fileType={CABSFileType.CATERING}
+          status={fileStatuses[CABSFileType.CATERING]}
           onFileUploaded={handleFileUpload}
           isDisabled={isProcessing || consolidationInProgress}
         />

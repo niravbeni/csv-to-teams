@@ -3,6 +3,7 @@ import {
   FunctionSummaryData, 
   TrainingRoomData, 
   VisitorData,
+  CateringRecord,
   MeetingType,
   RoomCategory,
   MeetingSource
@@ -186,6 +187,7 @@ const convertFunctionRoom = (data: FunctionRoomData): MasterMeetingRecord => {
 };
 
 // Convert Function Summary data to Master Meeting Record
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const convertFunctionSummary = (data: FunctionSummaryData): MasterMeetingRecord => {
   const meetingType = getMeetingType(data.use || '', data.purpose);
   
@@ -210,6 +212,7 @@ const convertFunctionSummary = (data: FunctionSummaryData): MasterMeetingRecord 
 };
 
 // Convert Training Room data to Master Meeting Record
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const convertTrainingRoom = (data: TrainingRoomData): MasterMeetingRecord => {
   return {
     meetingId: data.bookingRef,
@@ -232,13 +235,14 @@ const convertTrainingRoom = (data: TrainingRoomData): MasterMeetingRecord => {
 };
 
 // Match visitors to meeting hosts
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const matchVisitorsToHosts = (
   meetings: MasterMeetingRecord[], 
   visitors: VisitorData[]
 ): VisitorMatchResult[] => {
-  console.log('=== VISITOR MATCHING DEBUG ===');
-  console.log('Meetings count:', meetings.length);
-  console.log('Visitors count:', visitors.length);
+  // console.log('=== VISITOR MATCHING DEBUG ===');
+      // console.log('Meetings count:', meetings.length);
+    // console.log('Visitors count:', visitors.length);
   
   const results: VisitorMatchResult[] = [];
   const unmatchedVisitors: string[] = [];
@@ -361,50 +365,221 @@ const matchVisitorsToHosts = (
   return results;
 };
 
-// Main consolidation function - now only uses Function Room + Visitors
+// Helper function to extract multiple room numbers from a string like "149/150" 
+const extractAllRoomNumbers = (roomStr: string): string[] => {
+  if (!roomStr) return [];
+  
+  const roomNumbers: string[] = [];
+  
+  // Pattern 1: Named rooms like "TERRACE SILKS"
+  if (roomStr.toUpperCase().includes('TERRACE SILKS')) {
+    roomNumbers.push('TERRACE SILKS');
+  }
+  
+  // Pattern 2: Main room number at start (priority): "122 x12 / (6122)" → main room is 122
+  const mainRoomMatch = roomStr.match(/^(\d+)\s+x\d+/);
+  if (mainRoomMatch) {
+    roomNumbers.push(mainRoomMatch[1]); // This is the primary room number
+  }
+  
+  // Pattern 3: Parentheses codes: "(6149)" or "(6132/6133)"
+  const parenMatch = roomStr.match(/\(([^)]+)\)/);
+  if (parenMatch) {
+    const inner = parenMatch[1];
+    if (inner.includes('/')) {
+      const parts = inner.split('/');
+      roomNumbers.push(...parts);
+    } else {
+      roomNumbers.push(inner);
+    }
+  }
+  
+  // Pattern 4: Complex formats with letters and numbers: "145/a", "S3/82", "G10", "M2/06"
+  const letterNumberSlashMatch = roomStr.match(/^([A-Z]?\d+)\/([A-Za-z\d]+)/);
+  if (letterNumberSlashMatch) {
+    roomNumbers.push(letterNumberSlashMatch[1]); // "145", "S3", "M2"
+    roomNumbers.push(letterNumberSlashMatch[2]); // "a", "82", "06"
+  }
+  
+  // Pattern 5: Simple letter-number combinations at start: "G10", "S3"
+  const letterNumberMatch = roomStr.match(/^([A-Z]+\d+)/);
+  if (letterNumberMatch) {
+    roomNumbers.push(letterNumberMatch[1]);
+    // Also extract just the number part for matching
+    const numberPart = letterNumberMatch[1].match(/\d+/);
+    if (numberPart) {
+      roomNumbers.push(numberPart[0]);
+    }
+  }
+  
+  // Pattern 6: Standard slash-separated rooms: "149/150" or "132/133"
+  const slashMatch = roomStr.match(/(\d+)\/(\d+)/);
+  if (slashMatch) {
+    roomNumbers.push(slashMatch[1], slashMatch[2]);
+  }
+  
+  // Pattern 7: Simple number at start (if not already captured): "149", "136", "107"
+  if (roomNumbers.length === 0) {
+    const simpleMatch = roomStr.match(/^(\d+)/);
+    if (simpleMatch) {
+      roomNumbers.push(simpleMatch[1]);
+    }
+  }
+  
+  // Pattern 8: Extract single letters (like "a" in "145/a")
+  const singleLetters = roomStr.match(/\b[A-Za-z]\b/g);
+  if (singleLetters) {
+    roomNumbers.push(...singleLetters);
+  }
+  
+  return [...new Set(roomNumbers)].filter(item => item && item.length > 0);
+};
+
+// Helper function to match catering to booking by room and time
+const matchCateringToBooking = (
+  roomCode: string,
+  startTime: string,
+  endTime: string,
+  cateringRecords: CateringRecord[]
+): CateringRecord | null => {
+  // Convert times to minutes for comparison
+  const timeToMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  const meetingStart = timeToMinutes(startTime);
+  const meetingEnd = timeToMinutes(endTime);
+
+  // Extract all possible room numbers from the meeting room (e.g., "149/150" -> ["149", "150"])
+  const meetingRoomNumbers = extractAllRoomNumbers(roomCode);
+  
+  // Debug: Show if this is a multi-room booking
+  if (meetingRoomNumbers.length > 1) {
+    console.log(`🏢 MULTI-ROOM BOOKING: "${roomCode}" uses rooms [${meetingRoomNumbers.join(', ')}]`);
+  }
+
+  for (const catering of cateringRecords) {
+    // Extract all possible room numbers from catering room
+    const cateringRoomNumbers = extractAllRoomNumbers(catering.room);
+    
+    // Strategy 1: Check if any meeting room number matches any catering room number
+    let roomMatch = false;
+    for (const meetingRoom of meetingRoomNumbers) {
+      for (const cateringRoom of cateringRoomNumbers) {
+        // Exact match
+        if (meetingRoom === cateringRoom) {
+          roomMatch = true;
+          console.log(`🎯 EXACT MATCH: Meeting room ${meetingRoom} matches catering room ${cateringRoom}`);
+          break;
+        }
+        
+        // Complex format matching (G10, S3, M2, etc.)
+        if (meetingRoom.length > 3 || cateringRoom.length > 3) {
+          // Direct complex format match (G10 = G10, S3/82 = S3/82)
+          if (meetingRoom === cateringRoom) {
+            roomMatch = true;
+            console.log(`🎯 COMPLEX MATCH: Meeting ${meetingRoom} matches catering ${cateringRoom} (exact complex format)`);
+            break;
+          }
+          
+          // Extract base letters/numbers for complex matching (G10 -> G, 10)
+          const meetingBase = meetingRoom.match(/^([A-Z]+)(\d+)/);
+          const cateringBase = cateringRoom.match(/^([A-Z]+)(\d+)/);
+          if (meetingBase && cateringBase && meetingBase[1] === cateringBase[1] && meetingBase[2] === cateringBase[2]) {
+            roomMatch = true;
+            console.log(`🎯 COMPLEX MATCH: Meeting ${meetingRoom} matches catering ${cateringRoom} (base format)`);
+            break;
+          }
+        }
+        
+        // 3-digit to 4-digit conversion (121 <-> 6121) - only for numeric rooms
+        if (/^\d+$/.test(meetingRoom) && /^\d+$/.test(cateringRoom)) {
+          const meeting3Digit = meetingRoom.replace(/^6/, ''); // 6121 -> 121
+          const meeting4Digit = meetingRoom.length === 3 ? `6${meetingRoom}` : meetingRoom; // 121 -> 6121
+          const catering3Digit = cateringRoom.replace(/^6/, ''); // 6121 -> 121  
+          const catering4Digit = cateringRoom.length === 3 ? `6${cateringRoom}` : cateringRoom; // 121 -> 6121
+          
+          if (meeting3Digit === catering3Digit || meeting4Digit === catering4Digit || 
+              meetingRoom === catering3Digit || meetingRoom === catering4Digit ||
+              meeting3Digit === cateringRoom || meeting4Digit === cateringRoom) {
+            roomMatch = true;
+            console.log(`🎯 CONVERTED MATCH: Meeting ${meetingRoom} <-> Catering ${cateringRoom} (via 3/4 digit conversion)`);
+            break;
+          }
+        }
+      }
+      if (roomMatch) break;
+    }
+    
+    // Strategy 2: Fallback to original partial matching for complex cases
+    if (!roomMatch && catering.room && roomCode) {
+      const cleanCateringRoom = catering.room.toLowerCase().replace(/[^\w\d]/g, '');
+      const cleanMeetingRoom = roomCode.toLowerCase().replace(/[^\w\d]/g, '');
+      if (cleanCateringRoom.includes(cleanMeetingRoom) || cleanMeetingRoom.includes(cleanCateringRoom)) {
+        roomMatch = true;
+        console.log(`🎯 PARTIAL MATCH: Meeting "${roomCode}" ~ Catering "${catering.room}"`);
+      }
+    }
+    
+    if (roomMatch) {
+      // Check if times overlap (catering might have buffer times) 
+      const cateringStart = timeToMinutes(catering.meetStart);
+      const cateringEnd = timeToMinutes(catering.meetEnd);
+      
+      // Allow for flexibility in time matching (within 60 minutes)
+      const timeBuffer = 60;
+      const startDiff = Math.abs(meetingStart - cateringStart);
+      const endDiff = Math.abs(meetingEnd - cateringEnd);
+      
+      if (startDiff <= timeBuffer && endDiff <= timeBuffer) {
+                            return catering;
+      }
+    }
+  }
+  
+  return null;
+};
+
+// Helper to extract room code from various room string formats
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const extractRoomCodeFromString = (roomStr: string): string | undefined => {
+  if (!roomStr) return undefined;
+  
+  // Try different patterns to extract room codes
+  const patterns = [
+    /\((\d+)\)/, // "(6117)" or "(6132/6133)"
+    /(\d+)\/(\d+)/, // "132/133" -> use first number
+    /^(\d+)/, // "145/a" -> "145" 
+    /(\d+)/, // Any number sequence
+    /Room\s*(\d+)/i, // "Room 123"
+    /^([A-Z]\d+)/, // "G10", "M2" etc
+  ];
+  
+  for (const pattern of patterns) {
+    const match = roomStr.match(pattern);
+    if (match) {
+      // For patterns with multiple captures, use the first number
+      return match[1];
+    }
+  }
+  
+  // If no number found, try to extract just the room identifier
+  const cleanRoom = roomStr.replace(/[^\w\d]/g, '').toUpperCase();
+  return cleanRoom.length > 0 ? cleanRoom : undefined;
+};
+
+// Main consolidation function - now includes catering data
 export const consolidateCABSData = (
   functionRooms: FunctionRoomData[],
   functionSummary: FunctionSummaryData[],
   trainingRooms: TrainingRoomData[],
-  visitors: VisitorData[]
+  visitors: VisitorData[],
+  catering: CateringRecord[]
 ): ConsolidationResult => {
-  console.log('=== CONSOLIDATION DEBUG ===');
-  console.log('Input data counts:');
-  console.log('- Function Rooms:', functionRooms.length);
-  console.log('- Visitors:', visitors.length);
-  console.log('NEW APPROACH: Starting with ALL hosts from Visitor List (expecting 31 unique hosts)');
+  // console.log('📊 Processing:', functionRooms.length, 'rooms,', visitors.length, 'visitors,', catering.length, 'catering records');
 
-  // IMMEDIATE CHECK: Find our missing hosts in raw visitor data
-  const rawVisitorHosts = visitors.map(v => v.hostName?.trim()).filter(name => name);
-  const morrisFound = rawVisitorHosts.find(host => host && host.includes('Morris'));
-  const hughesFound = rawVisitorHosts.find(host => host && (host.includes('Hughes') || host.includes('Zoë')));
-  
-  console.log('🚨 IMMEDIATE HOST CHECK:');
-  console.log(`- Morris found in raw data: ${morrisFound ? `"${morrisFound}"` : 'NOT FOUND'}`);
-  console.log(`- Hughes found in raw data: ${hughesFound ? `"${hughesFound}"` : 'NOT FOUND'}`);
-  console.log(`- Total raw visitor host entries: ${rawVisitorHosts.length}`);
-  console.log(`- Unique raw visitor hosts: ${[...new Set(rawVisitorHosts)].length}`);
 
-  console.log('Sample Function Room data:', functionRooms.slice(0, 3));
-  console.log('Sample Visitor data:', visitors.slice(0, 3));
-
-  // Expected hosts from the user's list for comparison
-  const expectedHosts = [
-    'Mrs Samantha Heidrey', 'Ms Aedamar Comiskey', 'Mr Yin Lam', 'Mr Ross Schloeffel',
-    'Mr Greg Baker', 'Mr Nathan Cornell', 'Ms Sophie Bark', 'Ms Olesja Dobrowolska',
-    'Mr James Morris (ALS)', 'Miss Evie Sandwell', 'Mrs Lauren Oesman', 'Mr Daniel Martinez',
-    'Miss Leah Ermias', 'Miss Devinder Dabasia', 'Ms Zoë Hughes', 'Ms Herbie Mudhar',
-    'Mrs Angela Ogilvie', 'Ms Clare McMullen', 'Ms Catherine Shearn', 'Miss Jane Percy',
-    'Ms Katherine Davis', 'Mr Guy Patey', 'Miss Samantha Lee', 'Mrs Rachel Hemelryk',
-    'Mr Alastair Bain', 'Mrs Garima Gupta', 'Miss Anastasia Caneschi', 'Mr Conor Manders',
-    'Mr Jack Shand', 'Mr Rory Conway', 'Ms Anne Kaiser'
-  ];
-
-  console.log('=== EXPECTED HOSTS ANALYSIS ===');
-  console.log('Expected hosts:', expectedHosts.length);
-
-  // Detailed host name analysis for verification
-  console.log('=== HOST NAME ANALYSIS ===');
   // STEP 1: Extract ALL unique hosts from BOTH CSVs
   const hostsFromFunctionRooms = [...new Set(functionRooms
     .map(f => f.contact?.trim())
@@ -416,104 +591,16 @@ export const consolidateCABSData = (
     .filter(name => name && name.length > 0 && isRealPersonName(name))
   )];
 
-  // IMMEDIATE CHECK: See if our missing hosts passed the filters
-  console.log('🔍 POST-FILTER CHECK:');
-  console.log(`- Morris in filtered visitors: ${hostsFromVisitors.find(h => h.includes('Morris')) || 'NOT FOUND'}`);
-  console.log(`- Hughes in filtered visitors: ${hostsFromVisitors.find(h => h.includes('Hughes') || h.includes('Zoë')) || 'NOT FOUND'}`);
-  console.log(`- Total filtered visitor hosts: ${hostsFromVisitors.length}`);
-
-  // TEST NORMALIZATION DIRECTLY
-  console.log('🧪 NORMALIZATION TEST:');
-  console.log(`- "Mr James Morris (ALS)" -> "${normalizeName('Mr James Morris (ALS)')}"`)
-  console.log(`- "Ms Zoë Hughes" -> "${normalizeName('Ms Zoë Hughes')}"`)
-  if (morrisFound) console.log(`- Raw Morris "${morrisFound}" -> "${normalizeName(morrisFound)}"`)
-  if (hughesFound) console.log(`- Raw Hughes "${hughesFound}" -> "${normalizeName(hughesFound)}"`)
-
-  // SPECIFIC TEST FOR isRealPersonName function
-  console.log('🧪 isRealPersonName TEST:');
-  console.log(`- isRealPersonName("Mr James Morris (ALS)"): ${isRealPersonName('Mr James Morris (ALS)')}`);
-  console.log(`- isRealPersonName("Ms Zoë Hughes"): ${isRealPersonName('Ms Zoë Hughes')}`);
-  console.log(`- isRealPersonName("james morris"): ${isRealPersonName('james morris')}`);
-  console.log(`- isRealPersonName("zoe hughes"): ${isRealPersonName('zoe hughes')}`);
-
-  // Log all raw visitor host names for debugging
-  console.log('=== ALL RAW VISITOR HOST NAMES ===');
-  const allRawVisitorHosts = visitors.map(v => v.hostName?.trim()).filter(name => name && name.length > 0);
-  console.log('Total raw visitor host names:', allRawVisitorHosts.length);
-  allRawVisitorHosts.forEach((host, idx) => {
-    const isRealPerson = isRealPersonName(host);
-    const normalized = normalizeName(host);
-    console.log(`${idx + 1}. "${host}" -> normalized: "${normalized}" -> real person: ${isRealPerson}`);
-    
-    // Special attention to our missing hosts
-    if (host.includes('Morris') || host.includes('Hughes') || host.includes('Zoë')) {
-      console.log(`  ⚠️  SPECIAL: "${host}" is ${isRealPerson ? 'INCLUDED' : 'FILTERED OUT'}`);
-    }
-  });
-
-  // Log all raw function room host names for debugging
-  console.log('=== ALL RAW FUNCTION ROOM HOST NAMES ===');
-  const allRawFunctionHosts = functionRooms.map(f => f.contact?.trim()).filter(name => name && name.length > 0);
-  console.log('Total raw function room host names:', allRawFunctionHosts.length);
-  allRawFunctionHosts.slice(0, 20).forEach((host, idx) => {
-    const isRealPerson = isRealPersonName(host);
-    const normalized = normalizeName(host);
-    console.log(`${idx + 1}. "${host}" -> normalized: "${normalized}" -> real person: ${isRealPerson}`);
-  });
-
-  // Check which expected hosts are found in our data
-  console.log('=== EXPECTED HOST MATCHING ===');
-  expectedHosts.forEach(expectedHost => {
-    const normalizedExpected = normalizeName(expectedHost);
-    
-    const foundInVisitors = allRawVisitorHosts.some(rawHost => 
-      normalizeName(rawHost) === normalizedExpected ||
-      rawHost.toLowerCase().includes(expectedHost.toLowerCase()) ||
-      expectedHost.toLowerCase().includes(rawHost.toLowerCase())
-    );
-    
-    const foundInFunctionRooms = allRawFunctionHosts.some(rawHost => 
-      normalizeName(rawHost) === normalizedExpected ||
-      rawHost.toLowerCase().includes(expectedHost.toLowerCase()) ||
-      expectedHost.toLowerCase().includes(rawHost.toLowerCase())
-    );
-    
-    console.log(`"${expectedHost}" -> Found in Visitors: ${foundInVisitors}, Found in Function Rooms: ${foundInFunctionRooms}`);
-    
-    // Special debugging for the two missing hosts
-    if (expectedHost === 'Mr James Morris (ALS)' || expectedHost === 'Ms Zoë Hughes') {
-      console.log(`🔍 DEBUGGING ${expectedHost}:`);
-      console.log(`  - Normalized: "${normalizedExpected}"`);
-      console.log(`  - Looking for matches in visitors...`);
-      allRawVisitorHosts.forEach((rawHost, idx) => {
-        const rawNormalized = normalizeName(rawHost);
-        const exactMatch = rawNormalized === normalizedExpected;
-        const partialMatch1 = rawHost.toLowerCase().includes(expectedHost.toLowerCase());
-        const partialMatch2 = expectedHost.toLowerCase().includes(rawHost.toLowerCase());
-        if (exactMatch || partialMatch1 || partialMatch2 || rawHost.includes('Morris') || rawHost.includes('Hughes') || rawHost.includes('Zoë')) {
-          console.log(`    ${idx}: "${rawHost}" -> normalized: "${rawNormalized}" | exact: ${exactMatch} | partial1: ${partialMatch1} | partial2: ${partialMatch2}`);
-        }
-      });
-    }
-  });
-
   // Combine both lists for complete host coverage
   const allUniqueHosts = [...new Set([...hostsFromFunctionRooms, ...hostsFromVisitors])];
-  
-  console.log('=== HOST EXTRACTION ===');
-  console.log('Hosts from Function Rooms:', hostsFromFunctionRooms.length);
-  console.log('Hosts from Visitor List:', hostsFromVisitors.length);
-  console.log('Total unique hosts:', allUniqueHosts.length);
-  console.log('Sample hosts:', allUniqueHosts.slice(0, 10), '...');
   
   // STEP 2: Convert function room data to master meeting records
   let functionRoomRecords = functionRooms.map(convertFunctionRoom);
   
-  console.log('Raw Function Room Records:', functionRoomRecords.length);
-  
   // Filter to include ALL legitimate meetings (keep everything except obvious maintenance)
-  functionRoomRecords = functionRoomRecords.filter((meeting, index) => {
+  functionRoomRecords = functionRoomRecords.filter((meeting) => {
     const purpose = meeting.purpose.toLowerCase();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const roomUse = (meeting.originalData as unknown as FunctionRoomData).roomUse.toLowerCase();
     
     // Filter out maintenance activities and non-person hosts
@@ -528,21 +615,13 @@ export const consolidateCABSData = (
                           meeting.host.trim().length > 0 && // Must have a host
                           isRealPersonName(meeting.hostRaw); // Must be a real person name
     
-    if (index < 20 || !isValidMeeting) {
-      console.log(`Meeting ${index}: "${meeting.purpose}" | Host: "${meeting.hostRaw}" | Room Use: "${roomUse}" | Valid: ${isValidMeeting}`);
-    }
-    
     return isValidMeeting;
   });
   
-  console.log('Filtered Function Room Records (all valid meetings):', functionRoomRecords.length);
-  
   // STEP 3: Create a master record for EACH host from visitor list (ensuring we get all 31)
-  console.log('=== CREATING HOST RECORDS ===');
   const allMeetings: MasterMeetingRecord[] = [];
   
   allUniqueHosts.forEach((hostName, index) => {
-    console.log(`Processing host ${index + 1}/${allUniqueHosts.length}: "${hostName}"`);
 
     // Find all function room bookings for this host
     const hostBookings = functionRoomRecords.filter(meeting => {
@@ -562,26 +641,12 @@ export const consolidateCABSData = (
       return exactMatch || reverseMatch || containsMatch;
     });
     
-    console.log(`  - Found ${hostBookings.length} bookings for ${hostName}`);
-    
     // Find all visitors for this host
     const hostVisitors = visitors.filter(visitor => 
       normalizeName(visitor.hostName) === normalizeName(hostName) ||
       visitor.hostName.toLowerCase().includes(hostName.toLowerCase()) ||
       hostName.toLowerCase().includes(visitor.hostName.toLowerCase())
     );
-    
-    console.log(`  - Found ${hostVisitors.length} visitors for ${hostName}`);
-    
-    // Special debugging for missing hosts
-    if (hostName.includes('Morris') || hostName.includes('Hughes') || hostName.includes('Zoë')) {
-      console.log(`  🔍 SPECIAL DEBUG for "${hostName}":`);
-      console.log(`    - Normalized host name: "${normalizeName(hostName)}"`);
-      console.log(`    - Bookings found: ${hostBookings.length}`);
-      console.log(`    - Visitors found: ${hostVisitors.length}`);
-      console.log(`    - Visitor details:`, hostVisitors.map(v => v.visitorName));
-      console.log(`    - Will be ${hostVisitors.length > 0 ? 'INCLUDED' : 'EXCLUDED'} (needs visitors)`);
-    }
 
     // Only include hosts who have visitors (guests)
     if (hostVisitors.length > 0) {
@@ -614,12 +679,10 @@ export const consolidateCABSData = (
           originalData: { hostName } as Record<string, unknown>
         });
       }
-    } else {
-      console.log(`  - SKIPPING ${hostName} (no visitors)`);
     }
   });
   
-  console.log(`Created ${allMeetings.length} total meeting records from ${allUniqueHosts.length} hosts`);
+  // Created master meeting records
   
   // Calculate statistics
   const totalVisitors = visitors.length;
@@ -647,21 +710,69 @@ export const consolidateCABSData = (
     }
   };
   
-  console.log('=== FINAL CONSOLIDATION RESULT ===');
-  console.log('Total master records:', result.masterRecords.length);
-  console.log('Sample master records:', result.masterRecords.slice(0, 2));
-  console.log('Statistics:', result.statistics);
+  // console.log('=== FINAL CONSOLIDATION RESULT ===');
+  // console.log('Total master records:', result.masterRecords.length);
+  // console.log('Sample master records:', result.masterRecords.slice(0, 2));
+  // console.log('Statistics:', result.statistics);
   
   // Verify guest assignments
-  console.log('=== GUEST ASSIGNMENT VERIFICATION ===');
-  result.masterRecords.forEach((meeting, idx) => {
-    console.log(`Meeting ${idx + 1}: "${meeting.meetingName}"`);
-    console.log(`  Host: "${meeting.hostRaw}" -> normalized: "${meeting.host}"`);
-    console.log(`  Room: "${meeting.room}" -> Location: "${meeting.room.match(/^([A-Za-z0-9]+)/)?.[1] || meeting.room}"`);
-    console.log(`  Time: ${meeting.startTime} - ${meeting.endTime}`);
-    console.log(`  Guests (${meeting.guests.length}): ${meeting.guests.join(', ') || '[None]'}`);
-    console.log('---');
+  // Match catering to bookings
+  // Matching catering to meetings
+  
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let cateringMatches = 0;
+  console.log(`🍽️ CATERING MATCHING: Processing ${result.masterRecords.length} meetings with ${catering.length} catering records`);
+  
+  // Log summary of all room numbers for debugging
+  const allMeetingRooms = result.masterRecords.map(m => m.roomCode).filter(r => r).slice(0, 10);
+  const allCateringRooms = catering.map(c => c.room).slice(0, 5);
+  console.log(`🏠 Sample meeting rooms: [${allMeetingRooms.join(', ')}]`);
+  console.log(`🍽️ Sample catering rooms: [${allCateringRooms.map(r => `"${r}"`).join(', ')}]`);
+  
+  // Debug: Show extracted room numbers from catering
+  console.log('🔢 CATERING ROOM EXTRACTIONS:');
+  catering.slice(0, 10).forEach(c => {
+    const extracted = extractAllRoomNumbers(c.room);
+    console.log(`  "${c.room}" → [${extracted.join(', ')}]`);
   });
+  
+  result.masterRecords.forEach((meeting, index) => {
+    console.log(`🔍 Meeting ${index + 1}: ${meeting.purpose} | Room: ${meeting.roomCode} | Time: ${meeting.startTime}-${meeting.endTime}`);
+    
+    const cateringMatch = matchCateringToBooking(
+      meeting.roomCode || '',
+      meeting.startTime,
+      meeting.endTime,
+      catering
+    );
+    
+    if (cateringMatch) {
+      console.log(`✅ CATERING MATCHED: ${meeting.purpose} -> ${cateringMatch.cateringType} (${cateringMatch.covers} covers)`);
+      meeting.catering = {
+        type: cateringMatch.cateringType,
+        details: cateringMatch.cateringDetails,
+        covers: cateringMatch.covers
+      };
+      cateringMatches++;
+    } else {
+      console.log(`❌ NO CATERING MATCH for: ${meeting.purpose} (Room ${meeting.roomCode})`);
+    }
+  });
+  
+  // Catering matching completed
+
+  // console.log('=== GUEST ASSIGNMENT VERIFICATION ===');
+  // result.masterRecords.forEach((meeting, idx) => {
+  //   console.log(`Meeting ${idx + 1}: "${meeting.meetingName}"`);
+  //   console.log(`  Host: "${meeting.hostRaw}" -> normalized: "${meeting.host}"`);
+  //   console.log(`  Room: "${meeting.room}" -> Location: "${meeting.room.match(/^([A-Za-z0-9]+)/)?.[1] || meeting.room}"`);
+  //   console.log(`  Time: ${meeting.startTime} - ${meeting.endTime}`);
+  //   console.log(`  Guests (${meeting.guests.length}): ${meeting.guests.join(', ') || '[None]'}`);
+  //   if (meeting.catering) {
+  //     console.log(`  🍽️ Catering: ${meeting.catering.type} (${meeting.catering.covers} covers)`);
+  //   }
+  //   console.log('---');
+  // });
   
   return result;
 }; 

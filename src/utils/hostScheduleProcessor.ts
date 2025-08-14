@@ -104,7 +104,8 @@ export const groupMeetingsByHost = (meetings: MasterMeetingRecord[]): HostSchedu
       purpose: meeting.purpose,
       meetingName: meeting.meetingName,
       meetingType: meeting.meetingType,
-      roomCategory: meeting.roomCategory
+      roomCategory: meeting.roomCategory,
+      catering: meeting.catering // Pass catering information from MasterMeetingRecord
     };
     
     hostSchedule.bookings.push(booking);

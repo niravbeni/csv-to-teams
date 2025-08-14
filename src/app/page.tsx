@@ -168,9 +168,9 @@ export default function Home() {
             </CardHeader>
             <CardContent>
               <ol className="list-decimal list-inside space-y-2 text-sm">
-                <li>Upload 2 CABS CSV files: <strong>Function Room Report</strong> and <strong>Visitor Arrival List</strong></li>
+                <li>Upload 3 CABS CSV files: <strong>Function Room Report</strong>, <strong>Visitor Arrival List</strong>, and <strong>Catering Report</strong></li>
                 <li>Send the formatted messages directly to your Teams channel or copy for manual posting</li>
-              </ol>
+        </ol>
             </CardContent>
           </Card>
 
@@ -181,7 +181,7 @@ export default function Home() {
                 <FileSpreadsheet className="h-5 w-5 text-muted-foreground" />
                 <CardTitle>Upload CABS CSV Files</CardTitle>
               </div>
-              <CardDescription>Upload Function Room Report + Visitor Arrival List to generate host daily schedules</CardDescription>
+              <CardDescription>Upload Function Room Report + Visitor Arrival List + Catering Report to generate host daily schedules</CardDescription>
             </CardHeader>
             <CardContent>
               <MultiCsvUpload onDataParsed={handleDataParsed} isProcessing={isProcessing} />

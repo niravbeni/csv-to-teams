@@ -3,7 +3,8 @@ import {
   FunctionRoomData, 
   FunctionSummaryData, 
   TrainingRoomData, 
-  VisitorData 
+  VisitorData,
+  CateringRecord
 } from '@/types/cabsData';
 
 // CABS CSV Parsers
@@ -11,17 +12,12 @@ import {
 // Handles the specific CABS system CSV formats with metadata mixed in
 
 // Helper function to clean CSV data and extract actual records
-const cleanCABSData = (rawData: string[][], reportType: 'function-room' | 'function-summary' | 'training-room' | 'visitor-list'): string[][] => {
-  console.log(`Processing ${reportType} - Raw data rows:`, rawData.length);
-  
+const cleanCABSData = (rawData: string[][], reportType: 'function-room' | 'function-summary' | 'training-room' | 'visitor-list' | 'catering'): string[][] => {
   // For CABS CSV files, ALL rows contain the header info mixed with data
   // We need to identify data rows by checking if they contain actual meaningful data
   const cleaned = rawData.filter((row, index) => {
-    console.log(`Row ${index} (${row.length} cols):`, row);
-    
     // Skip empty rows 
     if (!row || row.length < 15) {
-      console.log(`Row ${index} skipped: too few columns (${row?.length})`);
       return false;
     }
     
@@ -35,7 +31,6 @@ const cleanCABSData = (rawData: string[][], reportType: 'function-room' | 'funct
              hasValidData = !!(visitorName && hostName && 
                       visitorName !== 'Visitor and Company' && 
                       hostName !== 'Host Name and Contact Details');
-      console.log(`Visitor check - Name: "${visitorName}", Host: "${hostName}", Valid: ${hasValidData}`);
     } else if (reportType === 'function-room' || reportType === 'function-summary') {
       // For function reports, check if we have room info around position 15-18
       const roomInfo = row[15]?.trim();
@@ -43,7 +38,6 @@ const cleanCABSData = (rawData: string[][], reportType: 'function-room' | 'funct
              hasValidData = !!(roomInfo && timeInfo && 
                       !roomInfo.includes('Start at') && 
                       !roomInfo.includes('Room'));
-      console.log(`Function check - Room: "${roomInfo}", Time: "${timeInfo}", Valid: ${hasValidData}`);
     } else if (reportType === 'training-room') {
       // For training, check around position 12-15
       const bookingRef = row[12]?.trim();
@@ -51,19 +45,21 @@ const cleanCABSData = (rawData: string[][], reportType: 'function-room' | 'funct
              hasValidData = !!(bookingRef && timeInfo && 
                       !bookingRef.includes('Booking') &&
                       timeInfo.match(/\d{2}:\d{2}/)); // Time format
-      console.log(`Training check - Ref: "${bookingRef}", Time: "${timeInfo}", Valid: ${hasValidData}`);
-    }
-    
-    if (hasValidData) {
-      console.log(`Row ${index} kept - contains valid ${reportType} data`);
-    } else {
-      console.log(`Row ${index} skipped - no valid ${reportType} data`);
+    } else if (reportType === 'catering') {
+      // For catering, check column 16/17 for catering type and column 20 for room
+      const cateringCode = row[16]?.trim();
+      const cateringName = row[17]?.trim(); 
+      const room = row[20]?.trim();
+             hasValidData = !!(cateringCode && cateringName && room && 
+                      !cateringCode.includes('Extras') &&
+                      !room.includes('Room') &&
+                      room.length > 3); // Room should have meaningful content
     }
     
     return hasValidData;
   });
   
-  console.log(`${reportType} cleaned data rows:`, cleaned.length);
+  // console.log(`${reportType}: ${cleaned.length} records found (from ${rawData.length} raw rows)`);
   return cleaned;
 };
 
@@ -76,19 +72,29 @@ export const parseFunctionRoomReport = (file: File): Promise<FunctionRoomData[]>
       skipEmptyLines: true,
       complete: (results) => {
         try {
-          console.log('Function Room Raw Data:', results.data.slice(0, 3));
-          
           const cleanData = cleanCABSData(results.data as string[][], 'function-room');
-          console.log('Function Room Clean Data:', cleanData.slice(0, 3));
           
           const functionRooms = cleanData.map((row, index) => {
-            console.log(`Row ${index} length: ${row.length}, first 25 columns:`, row.slice(0, 25));
-            
             const roomInfo = row[15] || '';
-            const roomCode = roomInfo.match(/\((\d+)\)/)?.[1] || ''; // Extract code like "6117" from "(6117)"
+            // Extract room code for matching - prioritize main room numbers over parenthetical codes
+            let roomCode = '';
             
-            if (index < 5) {
-              console.log(`Row ${index} room: "${roomInfo}" -> code: "${roomCode}"`);
+            // Strategy 1: Look for room numbers at the start (e.g., "149/150" from "149/150 x34 (+8 ex)")
+            const mainRoomMatch = roomInfo.match(/^(\d+(?:\/\d+)?)/);
+            if (mainRoomMatch) {
+              roomCode = mainRoomMatch[1];
+            } 
+            // Strategy 2: Look in parentheses for 4-digit codes: "(6149)" or "(6132/6133)" 
+            else {
+              const parenMatch = roomInfo.match(/\((\d{4}[\/\d]*)\)/);
+              if (parenMatch) {
+                roomCode = parenMatch[1];
+              } 
+              // Strategy 3: Any number sequence as fallback
+              else {
+                const numberMatch = roomInfo.match(/\d+/);
+                roomCode = numberMatch ? numberMatch[0] : '';
+              }
             }
             
             return {
@@ -105,11 +111,9 @@ export const parseFunctionRoomReport = (file: File): Promise<FunctionRoomData[]>
             };
           }).filter((record, index) => {
             const isValid = record.funcNo && record.contact && record.purpose;
-            console.log(`Record ${index} valid: ${isValid}`, record);
             return isValid;
           });
           
-          console.log('Final Function Room Records:', functionRooms);
           resolve(functionRooms);
         } catch (error) {
           console.error('Function Room parsing error:', error);
@@ -247,6 +251,8 @@ export const detectCABSFileType = (file: File): Promise<string> => {
         resolve('training-room');
       } else if (firstLines.includes('visitors arrival list')) {
         resolve('visitor-list');
+      } else if (firstLines.includes('for catering')) {
+        resolve('catering');
       } else {
         resolve('unknown');
       }
@@ -255,6 +261,108 @@ export const detectCABSFileType = (file: File): Promise<string> => {
     // Read just the first 1KB to detect type
     reader.readAsText(file.slice(0, 1024));
   });
+};
+
+// Parse Catering Report CSV
+export const parseCateringReport = (file: File): Promise<CateringRecord[]> => {
+  return new Promise((resolve, reject) => {
+    Papa.parse(file, {
+      header: false,
+      skipEmptyLines: true,
+      complete: (results) => {
+        try {
+          const rawData = results.data as string[][];
+          const cleanData = cleanCABSData(rawData, 'catering');
+          
+          const cateringRecords = cleanData.map((row, index) => {
+            // CORRECTED column mapping based on actual CSV structure:
+            // Col 16: Catering code (BA, BB, etc)  
+            // Col 17: Catering name (Breakfast A, etc)
+            // Col 20: Room number
+            // Col 22: Meet start time  
+            // Col 23: Meet end time
+            // Col 25: Covers
+            // Col 26: Notes
+            const cateringCode = row[16] || ''; // Column 16 - Catering code (BA, BB)
+            const cateringName = row[17] || ''; // Column 17 - Catering name (Breakfast A)
+            const hostInfo = row[19] || ''; // Column 19 - Host information  
+            const room = row[20] || ''; // Column 20 - Room number
+            const bufferStart = row[21] || ''; // Column 21 - Buffer start
+            const meetStart = row[22] || ''; // Column 22 - Meet start time
+            const meetEnd = row[23] || ''; // Column 23 - Meet end time  
+            const bufferEnd = row[24] || ''; // Column 24 - Buffer end
+            const covers = parseInt(row[25]) || 0; // Column 25 - Covers
+            const notes = row[26] || ''; // Column 26 - Notes (catering details)
+            
+            const record = {
+              hostRaw: hostInfo,
+              hostNormalized: hostInfo.toLowerCase().trim(),
+              room: room,
+              roomCode: extractRoomCode(room),
+              meetStart: meetStart,
+              meetEnd: meetEnd,
+              covers: covers,
+              cateringType: `${cateringCode} - ${cateringName}`.trim(),
+              cateringDetails: notes,
+              date: new Date().toISOString().split('T')[0], // Use current date
+              bufferStart: bufferStart,
+              bufferEnd: bufferEnd
+            } as CateringRecord;
+            
+            return record;
+          }).filter(record => {
+            const isValid = record.room && record.cateringType && (record.meetStart || record.bufferStart);
+            return isValid;
+          });
+          
+          // Successfully parsed catering records
+          console.log(`🍽️ CATERING: Found ${cateringRecords.length} records`);
+          if (cateringRecords.length > 0) {
+            console.log('🍽️ Sample catering records:', cateringRecords.slice(0, 3).map(r => ({
+              room: r.room,
+              roomCode: r.roomCode,
+              type: r.cateringType,
+              time: `${r.meetStart}-${r.meetEnd}`
+            })));
+          }
+          
+          resolve(cateringRecords);
+        } catch (error) {
+          reject(new Error(`Catering Report parsing error: ${error}`));
+        }
+      },
+      error: (error) => {
+        reject(new Error(`CSV parsing error: ${error.message}`));
+      }
+    });
+  });
+};
+
+// Helper function to extract room code from room string
+const extractRoomCode = (roomString: string): string | undefined => {
+  if (!roomString) return undefined;
+  
+  // Try different patterns to extract room codes
+  const patterns = [
+    /\((\d+)\)/, // "(6117)" or "(6132/6133)"
+    /(\d+)\/(\d+)/, // "132/133" -> use first number
+    /^(\d+)/, // "149" -> "149" 
+    /(\d+)/, // Any number sequence
+    /Room\s*(\d+)/i, // "Room 123"
+    /^([A-Z]\d+)/, // "G10", "M2" etc
+  ];
+  
+  for (const pattern of patterns) {
+    const match = roomString.match(pattern);
+    if (match) {
+      // For patterns with multiple captures, use the first number
+      return match[1];
+    }
+  }
+  
+  // If no number found, try to extract just the room identifier
+  const cleanRoom = roomString.replace(/[^\w\d]/g, '').toUpperCase();
+  return cleanRoom.length > 0 ? cleanRoom : undefined;
 };
 
 // Validate CSV file structure

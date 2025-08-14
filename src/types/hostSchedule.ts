@@ -10,6 +10,11 @@ export interface HostBooking {
   meetingName: string;
   meetingType: MeetingType;
   roomCategory: RoomCategory;
+  catering?: {
+    type: string;
+    details: string;
+    covers: number;
+  };
 }
 
 export interface HostSchedule {

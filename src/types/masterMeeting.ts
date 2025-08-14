@@ -27,6 +27,13 @@ export interface MasterMeetingRecord {
   endTime: string;             // End time (HH:MM)
   duration: string;            // Calculated duration
   
+  // Catering information
+  catering?: {
+    type: string;              // Catering type (e.g., "Breakfast A")
+    details: string;           // Detailed catering notes
+    covers: number;            // Number of covers for catering
+  };
+  
   // Metadata
   source: MeetingSource;       // Which CSV file this came from
   originalData: Record<string, unknown>; // Raw data for debugging
@@ -48,6 +55,7 @@ export enum CABSFileType {
   FUNCTION_SUMMARY = 'function-summary', 
   TRAINING_ROOM = 'training-room',
   VISITOR_LIST = 'visitor-list',
+  CATERING = 'catering',
 }
 
 // Upload component props

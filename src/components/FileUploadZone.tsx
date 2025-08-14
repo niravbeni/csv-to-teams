@@ -61,6 +61,13 @@ export default function FileUploadZone({
           icon: '👥',
           example: 'Visitors Arrival List'
         };
+      case CABSFileType.CATERING:
+        return {
+          title: 'Catering Report',
+          description: 'Meeting catering and refreshment details',
+          icon: '🍽️',
+          example: 'Catering Report'
+        };
       default:
         return {
           title: 'CSV File',
