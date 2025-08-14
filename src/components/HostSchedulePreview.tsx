@@ -1,32 +1,28 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, Send, Users, MapPin, Clock, Calendar } from 'lucide-react';
+import { Copy, Check, Users, MapPin, Clock, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { HostScheduleResult } from '@/types/hostSchedule';
 import { 
-  formatHostSchedulesForTeams, 
   formatHostSchedulesForCopy,
-  formatHostStatisticsForTeams
+  formatHostScheduleForCopy
 } from '@/utils/hostScheduleFormatter';
 
 interface HostSchedulePreviewProps {
   hostSchedules: HostScheduleResult;
-  onSendMessage: (messages: string[]) => void;
-  isSending: boolean;
 }
 
 export default function HostSchedulePreview({ 
-  hostSchedules, 
-  onSendMessage, 
-  isSending 
+  hostSchedules
 }: HostSchedulePreviewProps) {
   const [copied, setCopied] = useState(false);
+  const [individualCopied, setIndividualCopied] = useState<Record<string, boolean>>({});
   
-  const formattedMessages = formatHostSchedulesForTeams(hostSchedules);
+
 
   useEffect(() => {
     if (copied) {
@@ -38,16 +34,79 @@ export default function HostSchedulePreview({
   const handleCopy = async () => {
     try {
       const copyText = formatHostSchedulesForCopy(hostSchedules);
-      await navigator.clipboard.writeText(copyText);
+      
+      // Create rich text with HTML formatting for bold headings
+      const htmlText = copyText
+        .replace(/HOST NAME:/g, '<b>HOST NAME:</b>')
+        .replace(/BOOKINGS FOR TODAY/g, '<b>BOOKINGS FOR TODAY</b>')
+        .replace(/GUESTS:/g, '<b>GUESTS:</b>')
+        .replace(/(\d+\. )([A-Z][^]*?)(\n\n)/g, '$1<b>$2</b>$3') // Bold meeting names
+        .replace(/\n/g, '<br>');
+      
+      // Copy both plain text and rich HTML to clipboard
+      const clipboardItem = new ClipboardItem({
+        'text/plain': new Blob([copyText], { type: 'text/plain' }),
+        'text/html': new Blob([htmlText], { type: 'text/html' })
+      });
+      
+      await navigator.clipboard.write([clipboardItem]);
       setCopied(true);
     } catch (error) {
       console.error('Failed to copy text:', error);
+      // Fallback to plain text if rich text copy fails
+      try {
+        const copyText = formatHostSchedulesForCopy(hostSchedules);
+        await navigator.clipboard.writeText(copyText);
+        setCopied(true);
+      } catch (fallbackError) {
+        console.error('Fallback copy also failed:', fallbackError);
+      }
     }
   };
 
-  const handleSend = () => {
-    onSendMessage(formattedMessages);
+  const handleIndividualCopy = async (hostSchedule: import('@/types/hostSchedule').HostSchedule, hostName: string) => {
+    try {
+      const copyText = formatHostScheduleForCopy(hostSchedule);
+      
+      // Create rich text with HTML formatting for bold headings
+      const htmlText = copyText
+        .replace(/HOST NAME:/g, '<b>HOST NAME:</b>')
+        .replace(/BOOKINGS FOR TODAY/g, '<b>BOOKINGS FOR TODAY</b>')
+        .replace(/GUESTS:/g, '<b>GUESTS:</b>')
+        .replace(/(\d+\. )([A-Z][^]*?)(\n\n)/g, '$1<b>$2</b>$3') // Bold meeting names
+        .replace(/\n/g, '<br>');
+      
+      // Copy both plain text and rich HTML to clipboard
+      const clipboardItem = new ClipboardItem({
+        'text/plain': new Blob([copyText], { type: 'text/plain' }),
+        'text/html': new Blob([htmlText], { type: 'text/html' })
+      });
+      
+      await navigator.clipboard.write([clipboardItem]);
+      setIndividualCopied(prev => ({ ...prev, [hostName]: true }));
+      
+      // Reset the copied state after 2 seconds
+      setTimeout(() => {
+        setIndividualCopied(prev => ({ ...prev, [hostName]: false }));
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy individual schedule:', error);
+      // Fallback to plain text if rich text copy fails
+      try {
+        const copyText = formatHostScheduleForCopy(hostSchedule);
+        await navigator.clipboard.writeText(copyText);
+        setIndividualCopied(prev => ({ ...prev, [hostName]: true }));
+        
+        setTimeout(() => {
+          setIndividualCopied(prev => ({ ...prev, [hostName]: false }));
+        }, 2000);
+      } catch (fallbackError) {
+        console.error('Fallback copy also failed:', fallbackError);
+      }
+    }
   };
+
+
 
   if (hostSchedules.hostSchedules.length === 0) {
     return null;
@@ -70,29 +129,15 @@ export default function HostSchedulePreview({
             <CardTitle className="text-base">
               Host Daily Schedules ({hostSchedules.hostSchedules.length} hosts)
             </CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const message = formattedMessages[0] || '';
-                  console.log('🍽️ TEAMS MESSAGE:', message);
-                  alert('Check console for full Teams message text (with catering info)');
-                }}
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                📝 View Raw
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopy} 
-                className="flex items-center gap-2 cursor-pointer"
-              >
-                {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-                {copied ? 'Copied!' : 'Copy'}
-              </Button>
-            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleCopy} 
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+              {copied ? 'Copied!' : 'Copy All'}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -101,9 +146,29 @@ export default function HostSchedulePreview({
               <div key={hostSchedule.hostName} className="border-l-4 border-primary pl-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h4 className="font-semibold text-lg flex items-center gap-2">
-                      👤 {hostSchedule.formattedHostName}
-                    </h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-lg flex items-center gap-2">
+                        👤 {hostSchedule.formattedHostName}
+                      </h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleIndividualCopy(hostSchedule, hostSchedule.formattedHostName)}
+                        className="flex items-center gap-1 cursor-pointer"
+                      >
+                        {individualCopied[hostSchedule.formattedHostName] ? (
+                          <>
+                            <Check className="h-3 w-3 text-green-600" />
+                            <span className="text-xs">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            <span className="text-xs">Copy</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     
                     <div className="mt-3 space-y-4">
                       {/* Host Statistics */}
@@ -191,29 +256,7 @@ export default function HostSchedulePreview({
         </CardContent>
       </Card>
 
-      <Separator />
 
-      {/* Send Button */}
-      <div className="flex justify-center">
-        <Button 
-          onClick={handleSend} 
-          disabled={isSending}
-          size="lg"
-          className="cursor-pointer"
-        >
-          {isSending ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
-              Sending...
-            </>
-          ) : (
-            <>
-              <Send className="h-4 w-4" />
-              Send to Teams
-            </>
-          )}
-        </Button>
-      </div>
     </div>
   );
 } 

@@ -1,6 +1,43 @@
 import { MasterMeetingRecord } from '@/types/masterMeeting';
 import { HostSchedule, HostBooking, HostScheduleResult } from '@/types/hostSchedule';
 
+// Priority hosts to filter for - only these hosts will be shown in output
+const PRIORITY_HOSTS = [
+  'Leivadioti Iliana',
+  'Ermias Leah', 
+  'Keogh Matthew',
+  'Watkins Tom',
+  'Dulieu Ben',
+  'Wootton James',
+  'Cunningham-Day Julian'
+];
+
+// Helper function to check if a host is in the priority list
+const isPriorityHost = (hostName: string): boolean => {
+  const normalizedHost = hostName.toLowerCase().trim();
+  return PRIORITY_HOSTS.some(priorityHost => {
+    const normalizedPriority = priorityHost.toLowerCase().trim();
+    // Check exact match or if names match when reversed (Firstname Lastname vs Lastname Firstname)
+    if (normalizedHost === normalizedPriority) {
+      return true;
+    }
+    
+    // Check if it's the same name but in different order
+    const hostParts = normalizedHost.split(' ').filter(p => p.length > 0);
+    const priorityParts = normalizedPriority.split(' ').filter(p => p.length > 0);
+    
+    if (hostParts.length >= 2 && priorityParts.length >= 2) {
+      // Check if first+last matches last+first
+      const hostFirstLast = `${hostParts[0]} ${hostParts[hostParts.length - 1]}`;
+      const hostLastFirst = `${hostParts[hostParts.length - 1]} ${hostParts[0]}`;
+      
+      return hostFirstLast === normalizedPriority || hostLastFirst === normalizedPriority;
+    }
+    
+    return false;
+  });
+};
+
 // Helper function to format host name properly (Firstname Lastname without title)
 const formatHostName = (hostRaw: string): string => {
   const parts = hostRaw.trim().split(' ').filter(part => part.length > 0);
@@ -137,16 +174,29 @@ export const groupMeetingsByHost = (meetings: MasterMeetingRecord[]): HostSchedu
     console.log(`  - Time span: ${hostSchedule.timeSpan.earliest} - ${hostSchedule.timeSpan.latest}`);
   });
   
-  // Sort hosts by number of bookings (busiest first)
-  hostSchedules.sort((a, b) => b.totalBookings - a.totalBookings);
+  // Filter to only show priority hosts
+  const priorityHostSchedules = hostSchedules.filter(hostSchedule => {
+    const isPriority = isPriorityHost(hostSchedule.formattedHostName);
+    if (isPriority) {
+      console.log(`✅ PRIORITY HOST: ${hostSchedule.formattedHostName} (${hostSchedule.totalBookings} bookings)`);
+    } else {
+      console.log(`⏭️ FILTERED OUT: ${hostSchedule.formattedHostName} (not in priority list)`);
+    }
+    return isPriority;
+  });
   
-  // Calculate statistics
+  console.log(`🎯 PRIORITY FILTER: ${priorityHostSchedules.length}/${hostSchedules.length} hosts shown`);
+  
+  // Sort priority hosts by number of bookings (busiest first)
+  priorityHostSchedules.sort((a, b) => b.totalBookings - a.totalBookings);
+  
+  // Calculate statistics for priority hosts only
   const statistics = {
-    totalHosts: hostSchedules.length,
-    totalBookings: hostSchedules.reduce((sum, host) => sum + host.totalBookings, 0),
-    totalGuests: hostSchedules.reduce((sum, host) => sum + host.totalGuests, 0),
-    busiestHost: hostSchedules[0]?.formattedHostName || '',
-    mostBookings: hostSchedules[0]?.totalBookings || 0
+    totalHosts: priorityHostSchedules.length,
+    totalBookings: priorityHostSchedules.reduce((sum, host) => sum + host.totalBookings, 0),
+    totalGuests: priorityHostSchedules.reduce((sum, host) => sum + host.totalGuests, 0),
+    busiestHost: priorityHostSchedules[0]?.formattedHostName || '',
+    mostBookings: priorityHostSchedules[0]?.totalBookings || 0
   };
   
   console.log('=== HOST GROUPING STATISTICS ===');
@@ -156,7 +206,7 @@ export const groupMeetingsByHost = (meetings: MasterMeetingRecord[]): HostSchedu
   console.log('Busiest host:', statistics.busiestHost, 'with', statistics.mostBookings, 'bookings');
   
   return {
-    hostSchedules,
+    hostSchedules: priorityHostSchedules,
     statistics
   };
 }; 
